@@ -1,0 +1,12 @@
+.pio/
+.vscode/
+include/secrets.h
+.DS_Store
+._*
+__pycache__/
+server/.venv/
+server/media/
+server/config/channels.json
+.pytest_cache/
+
+include/title_tags.h

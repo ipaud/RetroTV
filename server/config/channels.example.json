@@ -1,0 +1,11 @@
+{
+  "channels": [
+    {"id": 1, "number": 1, "name": "REMOTE DEMO", "provider": "local", "source_type": "file", "video": "media/demo/demo.mjpeg", "audio": "media/demo/demo.aac", "loop": true},
+    {"id": 2, "number": 2, "name": "HLS TEST", "provider": "hls", "source_type": "hls", "source": "https://demo.unified-streaming.com/k8s/live/stable/scte35.isml/.m3u8", "audio_language": "en"},
+    {"id": 10, "number": 10, "name": "SX3", "provider": "3cat", "source_type": "live", "provider_channel": "sx3"},
+    {"id": 11, "number": 11, "name": "24H", "provider": "rtve", "source_type": "live", "provider_channel": "24h"},
+    {"id": 12, "number": 12, "name": "DORAEMON", "provider": "3cat", "source_type": "live", "provider_channel": "fc3"},
+    {"id": 13, "number": 13, "name": "3CAT ANIME", "provider": "3cat", "source_type": "live", "provider_channel": "tem2"},
+    {"id": 17, "number": 17, "name": "ONE PIECE", "provider": "pluto", "source_type": "live", "provider_channel": "one-piece-es"}
+  ]
+}

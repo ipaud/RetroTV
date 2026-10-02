@@ -1,0 +1,17 @@
+# RETROTV Server on a NAS (QNAP Container Station, Synology Container Manager) or any Docker host.
+# server/README.md, "NAS". Host networking: the TV finds the server as retrotv-server.local (mDNS), which
+# a bridged container cannot announce. Home network only: never forward port 8080 to the Internet.
+services:
+  retrotv-server:
+    image: retrotv-server:latest
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      PAUTV_ANNOUNCE: "1"
+      PAUTV_PORT: "8080"
+    volumes:
+      # The server's channel list. On a NAS, use the full path of the file in a shared folder.
+      - ./config/channels.json:/app/server/config/channels.json:ro

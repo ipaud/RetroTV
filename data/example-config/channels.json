@@ -1,0 +1,16 @@
+{
+  "channels": [
+    { "id": "demo", "number": 1, "name": "RETROTV DEMO", "type": "local",
+      "source": "/retrotv/media/demo/demo.mjpeg", "enabled": true },
+    { "id": "channel01", "number": 2, "name": "CANAL 1", "type": "local",
+      "source": "/retrotv/media/channel01", "enabled": true },
+    { "id": "channel02", "number": 3, "name": "CANAL 2", "type": "local",
+      "source": "/retrotv/media/channel02", "enabled": true },
+    { "id": "teletext", "number": 8, "name": "TELETEXT", "type": "internal",
+      "source": "teletext", "enabled": true },
+    { "id": "testcard", "number": 9, "name": "CARTA DE AJUSTE", "type": "internal",
+      "source": "testcard", "enabled": true },
+    { "id": "remote", "number": 10, "name": "RETROTV REMOTE", "type": "remote",
+      "source": "http://retrotv-server.local:8080/channel/1", "enabled": false }
+  ]
+}

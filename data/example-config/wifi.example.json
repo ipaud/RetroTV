@@ -1,0 +1,6 @@
+{
+  "networks": [
+    { "ssid": "home-2.4GHz-network", "password": "your-password" },
+    { "ssid": "office-2.4GHz-network", "password": "another-password" }
+  ]
+}

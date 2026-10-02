@@ -1,0 +1,8 @@
+# Only what server/Dockerfile copies goes into the build: never secrets, media or local state.
+*
+!server/app
+!server/requirements.txt
+!server/config/channels.example.json
+!tools/make_demo_clip.sh
+!tools/make_index.py
+**/__pycache__
