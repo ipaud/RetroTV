@@ -99,6 +99,11 @@ void App::startProgramme() {
         startTeletext();
         return;
       }
+      if (strcmp(ch->source, INTERNAL_MESSAGES) == 0) {
+        PLOG("CHANNEL", "CH%02u %s: messages", ch->number, ch->name);
+        startMessages();
+        return;
+      }
       if (strcmp(ch->source, INTERNAL_REMOTE_QR) == 0) {
         PLOG("CHANNEL", "CH%02u %s: remote QR", ch->number, ch->name);
         playMode_ = PlayMode::RemoteQr;
@@ -183,7 +188,8 @@ bool App::playOnAir(const Channel& ch, const ChannelSchedule& schedule, const ch
   const OnAirSlot slot =
       nextOnAirSlot(advanceEpisode_, currentEpisode_, nowMs, schedule.durations(), schedule.count());
   const size_t episode = slot.episode;
-  const uint32_t offsetMs = slot.offsetMs;
+  const uint32_t offsetMs = testFromStart_ ? 0 : slot.offsetMs;  // serial `T !path`: from 0:00
+  testFromStart_ = false;
   advanceEpisode_ = false;
 
   const char* path = schedule.path(episode);
@@ -326,6 +332,7 @@ uint32_t App::seekMedia(const char* videoPath, uint32_t offsetMs) {
 // False (and ERROR) when a player task did not stop: its file must not be closed under it.
 bool App::stopProgramme() {
   if (playMode_ == PlayMode::Tuning || playMode_ == PlayMode::SignalFlash) audio_.stopSound();  // the hiss
+  if (playMode_ == PlayMode::Messages) stopMessages();
   if (remoteActive_) remote_.cancel();  // a read waiting for the network returns at once
   if (!player_.stop() || !videoAhead_.stop()) {
     fail("MEDIA STUCK", "PRESS RESET");
@@ -516,6 +523,9 @@ void App::updatePlaying(uint32_t nowMs) {
       break;
     case PlayMode::RemoteQr:
       publishRemoteQr();  // only redraws when the address changed (Wi-Fi came, went, new IP)
+      break;
+    case PlayMode::Messages:
+      updateMessages(nowMs);
       break;
     case PlayMode::Tuning:
       updateTuning(nowMs);

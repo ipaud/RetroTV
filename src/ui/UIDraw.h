@@ -41,6 +41,9 @@ void drawFlash(Arduino_GFX& gfx);
 // One step of the switch-off; `drawnBand` is the band left by the previous step.
 void drawPowerOff(Arduino_GFX& gfx, const poweroff::Frame& f, int drawnBand);
 void drawSettings(Arduino_GFX& gfx, const UiState& s);
+void drawMicCard(Arduino_GFX& gfx, const UiState& s, bool meter);  // title (+ empty meter), hint
+void drawRecorderBody(Arduino_GFX& gfx, const UiState& s);          // GRABADORA: 3-2-1, REC, result
+void drawMicMeter(Arduino_GFX& gfx, const UiState& s);  // the meter and the level lines
 void drawError(Arduino_GFX& gfx, const UiState& s);
 
 // Redraws the rows of `page` that differ from `drawn` (all of them with `force`) and updates

@@ -3,6 +3,8 @@
 #include <Preferences.h>
 #include <stdint.h>
 
+#include "config.h"
+
 // User settings in NVS (namespace "pautv"). Setters only touch RAM; loop() writes a value
 // once it has been stable for SETTINGS_SAVE_DELAY_MS, so zapping does not wear the flash.
 class SettingsStore {
@@ -19,11 +21,31 @@ class SettingsStore {
   void setLastChannel(uint16_t number);
   void setBrightness(uint8_t percent);
 
+#if PAUTV_MIC_ENABLED  // RETROTV Voice (AJUSTES > VOZ)
+  bool micOn() const { return current_.micOn; }
+  bool clapOn() const { return current_.clapOn; }
+  uint8_t clapSensitivity() const { return current_.clapSensitivity; }
+  void setMicOn(bool on);
+  void setClapOn(bool on);
+  void setClapSensitivity(uint8_t s);
+  bool voiceStandby() const { return current_.voiceStandby; }  // APAGADO: STANDBY VOZ, else AHORRO MAXIMO
+  bool listenLed() const { return current_.listenLed; }
+  void setVoiceStandby(bool on);
+  void setListenLed(bool on);
+#endif
+
  private:
   struct Values {
     uint8_t volume;
     uint16_t lastChannel;
     uint8_t brightness;
+#if PAUTV_MIC_ENABLED
+    bool micOn;
+    bool clapOn;
+    uint8_t clapSensitivity;
+    bool voiceStandby;
+    bool listenLed;
+#endif
   };
   void touch();
 

@@ -70,6 +70,7 @@ void App::publishDiagnostics() {
 // VOLUME click or a tap plays the 440 Hz test tone. CH_NEXT too, so a bare board with only
 // BOOT can run the audio test. MENU goes back to the settings menu it was opened from.
 void App::onDiagnosticsInput(InputEvent e) {
+  if (onMicScreenInput(e)) return;
   switch (e) {
     case InputEvent::VolUp:
     case InputEvent::ToggleOsd:
@@ -135,6 +136,10 @@ void App::publishTestCard() {
 // swipes do the same, a tap selects, a long press leaves.
 
 void App::publishSettings() {
+  if (voiceMenu_) {
+    publishVoiceSettings();
+    return;
+  }
   settingsPublishedMs_ = millis();
   UiState s(Screen::Settings, "AJUSTES");
   if (wifi_.online()) {
@@ -144,6 +149,9 @@ void App::publishSettings() {
   }
   s.addLine("BRILLO     %u%%", settings_.brightness());
   s.addLine(muted_ ? "VOLUMEN    MUTE" : "VOLUMEN    %u", settings_.volume());
+#if PAUTV_MIC_ENABLED
+  s.addLine("VOZ        %s", !settings_.micOn() ? "OFF" : (settings_.clapOn() ? "PALMADAS" : "MIC"));
+#endif
   s.addLine("DIAGNOSTICO");
   s.addLine("REINICIAR");
   s.selected = settingsIndex_;
@@ -151,6 +159,10 @@ void App::publishSettings() {
 }
 
 void App::onSettingsInput(InputEvent e) {
+  if (voiceMenu_) {
+    onVoiceSettingsInput(e);
+    return;
+  }
   constexpr uint8_t count = static_cast<uint8_t>(SettingsItem::Count);
   const auto item = static_cast<SettingsItem>(settingsIndex_);
   const bool select = e == InputEvent::VolUp || e == InputEvent::ToggleOsd;
@@ -185,6 +197,14 @@ void App::onSettingsInput(InputEvent e) {
             audio_.beep();  // hear the new level; nothing else is playing in the menu
           }
           break;
+#if PAUTV_MIC_ENABLED
+        case SettingsItem::Voice:
+          if (!select) break;
+          voiceMenu_ = true;
+          voiceIndex_ = 0;
+          publishVoiceSettings();
+          return;
+#endif
         case SettingsItem::Diagnostics:
           if (!select) break;
           diagFromSettings_ = true;

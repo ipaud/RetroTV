@@ -20,6 +20,8 @@
 #include "storage/StorageManager.h"
 #include "teletext/Teletext.h"
 #include "ui/UIManager.h"
+#include "voice/AudioCapture.h"
+#include "voice/MessagePlayer.h"
 #include "web/WebRemote.h"
 
 // Top-level state machine on the Arduino loopTask. It never draws: it publishes UiState and
@@ -28,6 +30,7 @@
 //   AppPlayback.cpp  channels, programmes, channel switching, volume, OSD
 //   AppScreens.cpp   diagnostics, home card, test card, settings menu
 //   AppTeletext.cpp  teletext channel: index, what is on now, a guide page per channel
+//   AppVoice.cpp     RETROTV Voice (PAUTV_MIC_ENABLED builds): microphone screen, MIC TEST
 class App {
  public:
   void begin();
@@ -36,9 +39,20 @@ class App {
  private:
   // Tuning: a live channel's static and hiss while it connects; SignalFlash: the CRT flash once
   // its picture is there, just before it shows.
-  enum class PlayMode : uint8_t { None, Video, Tuning, SignalFlash, TestCard, Teletext, RemoteQr, NoSignal };
+  enum class PlayMode : uint8_t { None, Video, Tuning, SignalFlash, TestCard, Teletext, RemoteQr, NoSignal, Messages };
   enum class SwitchPhase : uint8_t { Static, Flash };
-  enum class SettingsItem : uint8_t { Wifi, Brightness, Volume, Diagnostics, Restart, Count };
+  enum class SettingsItem : uint8_t {
+    Wifi,
+    Brightness,
+    Volume,
+#if PAUTV_MIC_ENABLED
+    Voice,  // AJUSTES > VOZ
+#endif
+    Diagnostics,
+    Restart,
+    Count
+  };
+  enum class VoiceItem : uint8_t { Mic, Claps, Sensitivity, PowerMode, ListenLed, Record, Count };
 
   // App.cpp
   void enter(AppState next);
@@ -77,7 +91,9 @@ class App {
   bool openMedia(const char* videoPath);
   bool startLocalPlayer();
   bool recoverSd();
-  void enterStandby();
+  void enterStandby(bool voiceAllowed = true);  // a flat battery passes false: always deep sleep
+  void powerDown();                             // the CRT goes off; screen, Wi-Fi, speaker, LED off
+  [[noreturn]] void deepSleep();                // AHORRO MAXIMO: only a key wakes the TV
   void startLive();
   bool startIntro();
   void finishIntro();
@@ -123,6 +139,33 @@ class App {
   void publishSettings();
   void onSettingsInput(InputEvent e);
   void onDiagnosticsInput(InputEvent e);
+
+  // AppVoice.cpp: empty unless PAUTV_MIC_ENABLED.
+  void startVoice();
+  void updateVoice(uint32_t nowMs);
+  bool onMicScreenInput(InputEvent e);  // DIAGNOSTICO: CH- opens MICROFONO, MENU leaves it
+  void publishMic();
+  void startMicTest(uint32_t nowMs);
+  void toggleMicCapture();  // serial `V`: pause / resume the capture (A/B of its cost)
+  void pollClaps();         // a finished clap sequence -> the same InputEvents as the keys
+  void applyVoiceSettings();
+  void publishVoiceSettings();
+  void onVoiceSettingsInput(InputEvent e);
+  bool voiceStandbyChosen() const;
+  // Recorder (PAUTV_RECORDER_ENABLED): GRABADORA, 3-2-1, REC, MENSAJE GUARDADO.
+  void startRecorder();
+  void updateRecorder(uint32_t nowMs);
+  void onRecorderInput(InputEvent e);
+  void publishRecorder(uint32_t nowMs);
+  bool saveMessage(size_t samples, int& id, const char*& error);
+  void saveTestMessage();  // serial `Y`: a synthetic tone through the same save path (no microphone)
+  void deleteMessages();   // serial `E`: every msg_NNNN.wav goes (nothing else in the folder)
+  // MENSAJES channel (internal source "messages").
+  void startMessages();
+  void updateMessages(uint32_t nowMs);
+  void stopMessages();
+  void publishMessages(uint32_t nowMs);
+  [[noreturn]] void voiceStandby();  // STANDBY VOZ: listening; two claps (or a key) restart the TV
 
   // AppTeletext.cpp
   void startTeletext();
@@ -251,8 +294,34 @@ class App {
   uint8_t settingsIndex_ = 0;
   uint32_t settingsPublishedMs_ = 0;
 
+  // RETROTV Voice
+#if PAUTV_MIC_ENABLED
+  AudioCapture mic_;
+#endif
+  bool micScreen_ = false;        // DIAGNOSTICO is showing MICROFONO
+  bool voiceMenu_ = false;        // AJUSTES is showing VOZ
+  uint8_t voiceIndex_ = 0;
+  uint32_t micPublishedMs_ = 0;
+  uint32_t micTestUntilMs_ = 0;   // serial `v`: levels to the log until then (0 = off)
+  uint32_t micTestLogMs_ = 0;
+  uint32_t dullSeen_ = 0;  // dull transients already logged
+  char lastClap_[UI_LINE_LEN] = "";  // the MICROFONO screen shows the last sequence heard
+#if PAUTV_RECORDER_ENABLED
+  RecorderFlow recFlow_;
+#endif
+  RecPhase recShownPhase_ = RecPhase::Idle;
+  MessagePlayer messages_;
+  size_t messageCount_ = 0;
+  int* messageIds_ = nullptr;  // PSRAM, MessagePlayer::MAX_MESSAGES: msg_NNNN numbers in play order
+  uint32_t messagesPublishedMs_ = 0;
+  int16_t* recBuf_ = nullptr;  // PSRAM: WAV header + REC_MAX_MS at 16 kHz, kept once allocated
+  uint32_t recPublishedMs_ = 0;
+  int recId_ = 0;
+  const char* recError_ = "";
+
   // Debug: test tune (serial 'T <path>') and soak test (serial 'S', 'z')
   bool testTune_ = false;
+  bool testFromStart_ = false;  // serial `T !path`: the test tune starts at 0:00, not on air
   Channel testChannel_{};
   ChannelSchedule testSchedule_;
   char serialLine_[MEDIA_PATH_MAX] = "";

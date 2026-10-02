@@ -55,7 +55,8 @@ const char* parseChannel(JsonVariantConst v, Channel& ch) {
     return "remote source must be http://<server>/channel/<n>";
   }
   if (ch.type == ChannelType::Internal && strcmp(source, INTERNAL_TESTCARD) != 0 &&
-      strcmp(source, INTERNAL_TELETEXT) != 0 && strcmp(source, INTERNAL_REMOTE_QR) != 0) {
+      strcmp(source, INTERNAL_TELETEXT) != 0 && strcmp(source, INTERNAL_REMOTE_QR) != 0 &&
+      strcmp(source, INTERNAL_MESSAGES) != 0) {
     return "unknown internal source";
   }
 

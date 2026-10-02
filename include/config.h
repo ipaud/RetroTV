@@ -78,6 +78,120 @@ constexpr const char* NTP_SERVER_1 = "pool.ntp.org";
 constexpr const char* NTP_SERVER_2 = "time.google.com";
 constexpr long PAUTV_VALID_EPOCH = 1700000000;  // earlier = clock never set by NTP
 
+// --- RETROTV Voice (docs/VOICE.md) ------------------------------------------------------------
+// An optional layer, all off in the normal build: the TV is then exactly what it was. Build it in
+// with `pio run -e voice` (-DPAUTV_VOICE_ENABLED=1). Each part can still be left out on its own.
+#ifndef PAUTV_VOICE_ENABLED
+#define PAUTV_VOICE_ENABLED 0
+#endif
+#ifndef PAUTV_MIC_ENABLED  // I2S RX + the codec's microphone input, the VU meter, MIC TEST
+#define PAUTV_MIC_ENABLED PAUTV_VOICE_ENABLED
+#endif
+#ifndef PAUTV_CLAP_ENABLED  // double clap = mute, triple clap = next channel
+#define PAUTV_CLAP_ENABLED PAUTV_MIC_ENABLED
+#endif
+#ifndef PAUTV_CLAP_WAKE_ENABLED  // voice standby: two claps turn the TV on (AJUSTES > VOZ > APAGADO)
+#define PAUTV_CLAP_WAKE_ENABLED PAUTV_CLAP_ENABLED
+#endif
+#ifndef PAUTV_WAKEWORD_ENABLED  // "HEY RETRO" (v0.4+, needs ESP-SR)
+#define PAUTV_WAKEWORD_ENABLED 0
+#endif
+#ifndef PAUTV_VOICE_COMMANDS_ENABLED  // offline commands (v0.4)
+#define PAUTV_VOICE_COMMANDS_ENABLED 0
+#endif
+#ifndef PAUTV_RECORDER_ENABLED  // short WAV messages, only with REC on screen (AJUSTES > VOZ)
+#define PAUTV_RECORDER_ENABLED PAUTV_MIC_ENABLED
+#endif
+#if PAUTV_CLAP_ENABLED && !PAUTV_MIC_ENABLED
+#error "PAUTV_CLAP_ENABLED needs PAUTV_MIC_ENABLED"
+#endif
+#if PAUTV_RECORDER_ENABLED && !PAUTV_MIC_ENABLED
+#error "PAUTV_RECORDER_ENABLED needs PAUTV_MIC_ENABLED"
+#endif
+#if PAUTV_CLAP_WAKE_ENABLED && !PAUTV_CLAP_ENABLED
+#error "PAUTV_CLAP_WAKE_ENABLED needs PAUTV_CLAP_ENABLED"
+#endif
+// Voice standby (AppVoice.cpp): the TV looks off (CRT off, backlight, speaker, LED and Wi-Fi off)
+// but the microphone keeps listening. A wake is a restart: the same boot as from deep sleep.
+constexpr uint32_t VOICE_STANDBY_POLL_MS = 20;
+constexpr uint32_t LISTEN_LED_FLASH_MS = 120;  // one clap in standby: "I heard you"
+constexpr uint32_t VOICE_STANDBY_CPU_MHZ = 80;  // I2S runs from its own PLL clock, not the CPU's
+// Recorder (voice/Recorder.h): short messages, only with REC on screen.
+constexpr uint32_t REC_SAMPLE_RATE = 16000;    // WAV, PCM 16 bit mono
+constexpr float REC_LOWPASS_HZ = 6000.0f;      // speech; the rest would alias at 16 kHz
+constexpr uint32_t REC_MAX_MS = 15000;         // 15 s = 480 KB
+constexpr float REC_HIGHPASS_HZ = 300.0f;      // saved without the bass the TV's small speaker cannot play...
+constexpr float REC_TARGET_DB = -14.0f;        // ...with the voice raised to -14 dBFS (its loud 20 ms blocks)...
+constexpr float REC_MAX_GAIN_DB = 36.0f;       // ...but at most +36 dB, so a silent room stays quiet
+constexpr uint32_t REC_COUNTDOWN_MS = 3000;    // 3, 2, 1
+constexpr uint32_t REC_RESULT_MS = 2500;       // MENSAJE GUARDADO / ERROR AL GUARDAR
+constexpr uint32_t REC_SCREEN_REFRESH_MS = 250;
+constexpr const char* REC_DIR = "/retrotv/voice/messages";
+// MENSAJES channel (internal source "messages", voice/MessagePlayer.h): its task only exists while
+// the channel is on and replaces the video's audio task then (same core and priority, also paced
+// by writePcm).
+constexpr uint32_t MSG_TASK_STACK = 4096;
+constexpr uint32_t MSG_GAP_MS = 1500;          // silence between two messages
+constexpr uint32_t MSG_STOP_WAIT_MS = 500;
+constexpr float MSG_LOWPASS_HZ = 7000.0f;      // 16 kHz -> 44.1 kHz: no images above the voice
+constexpr uint32_t MSG_SCREEN_REFRESH_MS = 250;
+// The microphone shares the playback I2S port (same clocks, 44.1 kHz, 16 bit, stereo slots); the
+// ES8311 puts its one ADC channel in the left slot. Its analogue MEMS microphone is on MIC1.
+constexpr uint8_t MIC_PGA_REG14 = 0x1A;     // MIC1P/N in, analogue PGA +30 dB (Freenove's echo sketch)
+constexpr uint8_t MIC_ADC_VOLUME_REG17 = 0xC8;  // ADC digital volume +4.5 dB (0xBF = 0 dB)
+constexpr uint8_t MIC_ADC_SCALE = 4;        // REG16 ADC gain scale-up, 6 dB a step: 4 = +24 dB, the chip's default
+                                            // (0 dB read room sound at -80..-89 dBFS, 2026-10-02)
+constexpr size_t MIC_BLOCK_FRAMES = 512;    // 11.6 ms per read
+constexpr uint32_t MIC_READ_TIMEOUT_MS = 100;
+// The capture task sleeps in i2s_read. Above the display (prio 3, whose 38 ms frames would
+// otherwise eat the ~46 ms RX DMA cushion), below audio playback (prio 5). ~0.5 % of a core.
+constexpr int MIC_TASK_CORE = 1;
+constexpr int MIC_TASK_PRIO = 4;
+constexpr uint32_t MIC_TASK_STACK = 4096;
+constexpr int16_t MIC_FLOOR_DB10 = -900;    // levels below -90 dBFS show as -90
+constexpr int16_t MIC_METER_MIN_DB10 = -600;  // the VU bar spans -60..0 dBFS
+constexpr uint32_t MIC_SCREEN_REFRESH_MS = 66;  // the MICROFONO screen, ~15 Hz
+constexpr uint32_t MIC_PEAK_HOLD_MS = 1000;   // the peak mark on the bar
+constexpr uint32_t MIC_TEST_MS = 10000;       // serial `v`: levels this long
+constexpr uint32_t MIC_TEST_LOG_MS = 250;
+// Clap detector (voice/ClapDetector.h). Starting values, to calibrate with real claps.
+constexpr uint32_t CLAP_WINDOW_MS = 5;            // energy windows
+constexpr float CLAP_FLOOR_ALPHA = 1.0f / 300;    // noise floor EMA per window: ~1.5 s
+constexpr uint8_t CLAP_SENSITIVITY_DEFAULT = 60;  // 0..100
+constexpr uint8_t CLAP_SENSITIVITY_STEP = 10;     // AJUSTES > VOZ > SENSIBLE
+constexpr int16_t CLAP_MARGIN_MAX_DB10 = 300;     // over the floor at sensitivity 0
+constexpr int16_t CLAP_MARGIN_MIN_DB10 = 100;     // at 100 (60 -> 18 dB)
+constexpr int16_t CLAP_MIN_DB10 = -460;           // never below -46 dBFS, however quiet the room
+                                                  // (real claps at 1 m: -22..-38 dBFS over a -54..-66 room)
+constexpr int16_t CLAP_ATTACK_DB10 = 90;          // the rise within one or two windows
+constexpr int16_t CLAP_DECAY_DB10 = 100;          // it must drop this far from its peak...
+constexpr uint32_t CLAP_MAX_MS = 100;             // ...this soon, or it is not a clap
+constexpr uint32_t CLAP_ECHO_MS = 180;            // after a clap, its echo is ignored: two hands are never
+                                                  // faster (real doubles: 215-380 ms; a mute pop + echo: 161 ms)
+constexpr uint32_t CLAP_GAP_MAX_MS = 700;         // claps further apart are separate sequences
+// What makes a sequence of claps real (a knock, an alarm or a rattle is not), checked when it closes:
+constexpr uint32_t CLAP_RHYTHM_MAX_MS = 600;      // two hands: 0.18-0.6 s between claps (real: 0.21-0.5 s)
+constexpr int16_t CLAP_PEAK_SPREAD_DB10 = 90;     // the claps of one sequence within 9 dB of each other
+constexpr uint8_t CLAP_SEQUENCE_MAX = 3;          // 4 or more (an alarm beeping, something rattling): nothing
+constexpr float CLAP_HF_HZ = 2000.0f;             // a clap is bright: much of its energy above 2 kHz...
+constexpr float CLAP_HF_MIN_SHARE = 0.18f;        // ...a knock or a door is mostly below it (the user's claps: 21-35 %)
+constexpr int16_t CLAP_STANDBY_MIN_DB10 = -360;   // in STANDBY VOZ only a clap near the TV counts (-36 dBFS)
+// STANDBY VOZ wakes on two claps with quiet around them: a pair of household bangs passed every check
+// above and switched the TV on (2026-10-02), but it came in a cluster of bangs; a person claps after
+// a moment of quiet. (Three claps would be safer; the user did not want them.)
+constexpr uint32_t STANDBY_QUIET_BEFORE_MS = 2500;  // no bang in the 2.5 s before the first clap
+constexpr uint32_t STANDBY_QUIET_AFTER_MS = 500;    // nor in the 0.5 s after the sequence closed (1.2 s in all)
+constexpr int16_t CLAP_PLAYBACK_EXTRA_DB10 = 60;  // threshold up while the TV plays sound
+// A "clap" that lines up with a sharp rise in the programme's own sound is the TV hearing itself
+// (voice/PlaybackEnvelope.h). The mic's timestamps run 0-12 ms late (RX DMA), the speaker's +-5 ms.
+constexpr uint32_t CLAP_TV_LOOKBACK_MS = 80;
+constexpr uint32_t CLAP_TV_LOOKAHEAD_MS = 30;
+constexpr int16_t CLAP_TV_RISE_DB10 = 80;   // the programme jumped 8 dB...
+constexpr int16_t CLAP_TV_MIN_DB10 = -350;  // ...to at least -35 dBFS (digital, before the volume)
+constexpr float CLAP_TV_HIGHPASS_HZ = 400.0f;  // measured above this: the small speaker plays no bass
+constexpr uint32_t CLAP_SELF_SOUND_TAIL_MS = 350; // after its own static, beep, mute or volume change (the
+                                                  // speaker pops when the DAC mutes), claps are not taken
+
 // --- Audio (ES8311 + I2S) ------------------------------------------------------------------
 constexpr uint32_t AUDIO_SAMPLE_RATE = 44100;
 constexpr int AUDIO_MCLK_MULTIPLE = 256;  // MCLK = 11.2896 MHz, a row of the ES8311 coeff table

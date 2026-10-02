@@ -99,6 +99,25 @@ void App::runSerialCommand(char command, const char* argument, uint32_t nowMs) {
     case 'm':
       logMemory("snapshot");
       return;
+    case 'v':  // MIC TEST: microphone levels in the log for MIC_TEST_MS (voice builds)
+      startMicTest(nowMs);
+      return;
+    case 'V':  // pause / resume the microphone capture
+      toggleMicCapture();
+      return;
+    case 'R':  // GRABADORA: start a message, or stop the one being recorded (= a key)
+      if (state_ == AppState::Recorder) {
+        onRecorderInput(InputEvent::VolUp);
+      } else {
+        startRecorder();
+      }
+      return;
+    case 'Y':  // a synthetic test message (a tone), saved like a recording, without the microphone
+      saveTestMessage();
+      return;
+    case 'E':  // delete every saved message
+      deleteMessages();
+      return;
     case 'w':
       showBatteryWarning();
       return;
@@ -120,8 +139,12 @@ void App::runSerialCommand(char command, const char* argument, uint32_t nowMs) {
 }
 
 void App::tuneTestPath(const char* path) {
+  const bool fromStart = path[0] == '!';  // `T !/retrotv/...`: from the beginning, e.g. an intro song
+  if (fromStart) ++path;
+  const bool internal = strcmp(path, INTERNAL_MESSAGES) == 0 || strcmp(path, INTERNAL_TELETEXT) == 0 ||
+                        strcmp(path, INTERNAL_TESTCARD) == 0;  // `T messages`: an internal channel
   const bool remote = strncmp(path, "http://", 7) == 0;
-  if ((remote ? !isRemoteChannelUrl(path) : path[0] != '/') || strlen(path) >= CHANNEL_SOURCE_LEN) {
+  if (!internal && ((remote ? !isRemoteChannelUrl(path) : path[0] != '/') || strlen(path) >= CHANNEL_SOURCE_LEN)) {
     PLOG("CHANNEL", "test tune needs an absolute path or http://<server>/channel/<n>, shorter than %u",
          static_cast<unsigned>(CHANNEL_SOURCE_LEN));
     return;
@@ -131,7 +154,7 @@ void App::tuneTestPath(const char* path) {
   snprintf(testChannel_.id, sizeof(testChannel_.id), "test");
   snprintf(testChannel_.name, sizeof(testChannel_.name), "TEST");
   snprintf(testChannel_.source, sizeof(testChannel_.source), "%s", path);
-  testChannel_.type = remote ? ChannelType::Remote : ChannelType::Local;
+  testChannel_.type = internal ? ChannelType::Internal : (remote ? ChannelType::Remote : ChannelType::Local);
   testChannel_.enabled = true;
   testSchedule_.reset();  // rebuilt from the card: fixtures may have changed
   testTune_ = true;
@@ -140,7 +163,8 @@ void App::tuneTestPath(const char* path) {
   lastEpisode_ = -1;
   remoteRetryDue_ = false;
   remoteAttempt_ = 0;
-  PLOG("CHANNEL", "test tune %s", path);
+  testFromStart_ = fromStart;
+  PLOG("CHANNEL", "test tune %s%s", path, fromStart ? " from 0:00" : "");
   enter(AppState::Playing);
 }
 

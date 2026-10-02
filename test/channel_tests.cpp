@@ -185,6 +185,18 @@ static void testChannelZero() {
   CHECK(cm.prev()->number == 1 && cm.next()->number == 0);
 }
 
+// RETROTV Voice: the recorded messages are an internal channel with any number (docs/VOICE.md).
+static void testMessagesChannel() {
+  ChannelManager cm;
+  LoadReport r;
+  CHECK(loadText(cm, R"({"channels": [
+    {"id": "a", "number": 1, "name": "A", "type": "internal", "source": "testcard"},
+    {"id": "m", "number": 98, "name": "Mensajes", "type": "internal", "source": "messages"}]})", r));
+  CHECK(cm.count() == 2 && r.skipped == 0);
+  CHECK(cm.select(98) != nullptr && std::string(cm.current()->source) == INTERNAL_MESSAGES);
+  CHECK(std::string(cm.current()->name) == "MENSAJES");
+}
+
 static void testSetEnabled() {
   ChannelManager cm;
   LoadReport r;
@@ -201,6 +213,7 @@ static void testSetEnabled() {
 }
 
 void runChannelTests() {
+  testMessagesChannel();
   testChannelZero();
   testSetEnabled();
   testDefaultChannelsJson();

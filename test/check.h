@@ -25,3 +25,4 @@ void runWifiTests();
 void runWebTests();
 void runConfigTests();
 void runBatteryTests();
+void runVoiceTests();

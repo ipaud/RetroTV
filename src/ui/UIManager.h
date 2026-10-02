@@ -26,6 +26,9 @@ enum class Screen : uint8_t {
   Error,
   Teletext,  // the page from publishTeletext()
   RemoteQr,  // title = the URL to encode ("" = no Wi-Fi); lines = what to read under it
+  Microphone,  // RETROTV Voice: the VU meter (meterPct, meterPeakPct) and its level lines
+  Recorder,    // GRABADORA: lines[0] big (3 / REC / ...), lines[1] under it, meterPct = REC progress
+  Messages,    // MENSAJES: the same layout: number, time, progress, "1 DE 5"
 };
 
 // Semantic colour of a text line; the renderer maps it to the palette.
@@ -48,6 +51,8 @@ struct UiState {
   Tone tones[UI_MAX_LINES];
   uint8_t lineCount = 0;
   uint8_t selected = UI_NO_SELECTION;  // highlighted line (settings menu)
+  uint8_t meterPct = 0;      // Screen::Microphone: the level, 0..100 % of the bar
+  uint8_t meterPeakPct = 0;  // and the held peak mark
 
  private:
   void addLineV(Tone tone, const char* fmt, va_list args) __attribute__((format(printf, 3, 0)));

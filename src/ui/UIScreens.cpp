@@ -211,6 +211,83 @@ void drawSettings(Arduino_GFX& gfx, const UiState& s) {
   drawText(gfx, 4, SCREEN_H - 12, SETTINGS_HINT, 1, COLOR_GREY);
 }
 
+// MICROFONO: a segmented VU bar across the screen, green, then yellow, then red near full scale,
+// with the held peak as a white segment; the level lines under it.
+namespace {
+constexpr int MIC_BAR_X = 14;
+constexpr int MIC_BAR_Y = 72;
+constexpr int MIC_BAR_H = 44;
+constexpr int MIC_SEGMENTS = 24;
+constexpr int MIC_SEG_STEP = 12;  // 10 px lit + 2 px gap: 24 x 12 = 288 px
+constexpr int MIC_SEG_W = 10;
+constexpr int MIC_YELLOW_FROM = 16;  // segment 16 = -20 dBFS (2.5 dB a segment from -60)
+constexpr int MIC_RED_FROM = 22;     // -5 dBFS
+constexpr int MIC_TEXT_Y = 146;
+constexpr int MIC_TEXT_STEP = 20;
+constexpr const char* MIC_HINT = "MENU: VOLVER";
+
+uint16_t micSegmentColor(int i, bool lit) {
+  if (!lit) return COLOR_DARK_GREY;
+  if (i >= MIC_RED_FROM) return COLOR_RED;
+  if (i >= MIC_YELLOW_FROM) return COLOR_YELLOW;
+  return COLOR_GREEN;
+}
+}  // namespace
+
+void drawMicCard(Arduino_GFX& gfx, const UiState& s, bool meter) {
+  gfx.fillScreen(COLOR_BLACK);
+  drawText(gfx, 12, 10, s.title, 3, COLOR_GREEN);
+  if (!meter) {
+    drawText(gfx, 4, SCREEN_H - 12, s.screen == Screen::Recorder ? "CUALQUIER TECLA: PARAR" : "CH-/CH+: CANAL", 1, COLOR_GREY);
+    return;
+  }
+  gfx.drawRect(MIC_BAR_X - 4, MIC_BAR_Y - 4, MIC_SEGMENTS * MIC_SEG_STEP + 6, MIC_BAR_H + 8, COLOR_GREY);
+  drawText(gfx, MIC_BAR_X - 2, MIC_BAR_Y + MIC_BAR_H + 8, "-60", 1, COLOR_GREY);
+  drawText(gfx, MIC_BAR_X + MIC_YELLOW_FROM * MIC_SEG_STEP - 6, MIC_BAR_Y + MIC_BAR_H + 8, "-20", 1, COLOR_GREY);
+  drawText(gfx, MIC_BAR_X + MIC_SEGMENTS * MIC_SEG_STEP - 18, MIC_BAR_Y + MIC_BAR_H + 8, "0 DB", 1, COLOR_GREY);
+  drawText(gfx, 4, SCREEN_H - 12, MIC_HINT, 1, COLOR_GREY);
+}
+
+void drawMicMeter(Arduino_GFX& gfx, const UiState& s) {
+  const int lit = (s.meterPct * MIC_SEGMENTS + 50) / 100;
+  const int peak = s.meterPeakPct == 0 ? -1 : (s.meterPeakPct * MIC_SEGMENTS + 50) / 100 - 1;
+  for (int i = 0; i < MIC_SEGMENTS; ++i) {
+    const uint16_t color = i == peak && i >= lit ? COLOR_WHITE : micSegmentColor(i, i < lit);
+    gfx.fillRect(MIC_BAR_X + i * MIC_SEG_STEP, MIC_BAR_Y, MIC_SEG_W, MIC_BAR_H, color);
+  }
+  for (int i = 0; i < s.lineCount; ++i) {
+    const int y = MIC_TEXT_Y + i * MIC_TEXT_STEP;
+    gfx.fillRect(0, y - 2, SCREEN_W, MIC_TEXT_STEP - 2, COLOR_BLACK);
+    drawText(gfx, 16, y, s.lines[i], 2, toneColor(s.tones[i]));
+  }
+}
+
+// GRABADORA: one big line (a countdown digit, REC with a red dot, or the result), one under it,
+// and during REC a progress bar towards the 15 s limit.
+void drawRecorderBody(Arduino_GFX& gfx, const UiState& s) {
+  constexpr int BODY_Y = 50;
+  constexpr int BIG_Y = 82;
+  constexpr int SUB_Y = 150;
+  constexpr int BAR_Y = 186;
+  gfx.fillRect(0, BODY_Y, SCREEN_W, SCREEN_H - BODY_Y - 14, COLOR_BLACK);
+  if (s.lineCount == 0) return;
+  const bool rec = s.tones[0] == Tone::Bad && s.meterPct != 0xFF;
+  const uint8_t size = strlen(s.lines[0]) <= 2 ? 7 : (strlen(s.lines[0]) <= 8 ? 5 : 3);
+  const int w = textWidth(s.lines[0], size);
+  int x = (SCREEN_W - w) / 2;
+  if (rec) {  // the red dot before REC
+    gfx.fillCircle(x - 14, BIG_Y + size * 7 / 2, size * 3, COLOR_RED);
+    x += 10;
+  }
+  drawText(gfx, x, BIG_Y, s.lines[0], size, toneColor(s.tones[0]));
+  if (s.lineCount > 1) drawCentered(gfx, SUB_Y, s.lines[1], 2, toneColor(s.tones[1]));
+  if (s.meterPct != 0xFF) {  // REC towards its limit (red), or a message playing (green)
+    gfx.drawRect(30, BAR_Y, SCREEN_W - 60, 14, COLOR_GREY);
+    gfx.fillRect(32, BAR_Y + 2, (SCREEN_W - 64) * s.meterPct / 100, 10, rec ? COLOR_RED : COLOR_GREEN);
+  }
+  if (s.lineCount > 2) drawCentered(gfx, BAR_Y + 22, s.lines[2], 1, toneColor(s.tones[2]));
+}
+
 void drawError(Arduino_GFX& gfx, const UiState& s) {
   gfx.fillScreen(COLOR_BLACK);
   gfx.fillRect(0, 0, SCREEN_W, 40, COLOR_RED);

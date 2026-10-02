@@ -24,6 +24,7 @@ constexpr int CHANNEL_NUMBER_MAX = 999;  // 0 is a channel too (a tutorial befor
 constexpr const char* INTERNAL_TESTCARD = "testcard";
 constexpr const char* INTERNAL_TELETEXT = "teletext";
 constexpr const char* INTERNAL_REMOTE_QR = "mando";  // a QR code that opens the web remote
+constexpr const char* INTERNAL_MESSAGES = "messages";  // RETROTV Voice: the recorded messages, one after the other
 
 struct Channel {
   char id[CHANNEL_ID_LEN];

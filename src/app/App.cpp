@@ -48,6 +48,7 @@ void App::begin() {
   web_.setChannels(channels_, logoMask_);
   if (!web_.begin()) PLOG("WEB", "remote server did not start");
   audio_.begin(settings_.volume());
+  startVoice();  // nothing unless PAUTV_MIC_ENABLED; a missing microphone changes nothing else
   if (!player_.begin(display_, audio_)) fail("MEDIA INIT FAILED", "OUT OF MEMORY");
   if (!remote_.begin()) PLOG("REMOTE", "out of memory: remote channels show NO SIGNAL");
   if (!videoAhead_.begin()) fail("MEDIA INIT FAILED", "OUT OF MEMORY");
@@ -107,6 +108,7 @@ void App::loop() {
   publishWebState();
   pollConfigRequests(now);
   player_.logStats(now);
+  updateVoice(now);
 #if PAUTV_DEBUG_STATS
   trackRemotePlayback(now);
   logRemoteStats(now);
@@ -122,7 +124,7 @@ void App::loop() {
       }
       break;
     case AppState::Diagnostics:
-      if (wifi_.state() != shownWifiState_) publishDiagnostics();  // live network lines
+      if (!micScreen_ && wifi_.state() != shownWifiState_) publishDiagnostics();  // live network lines
       if (!diagFromSettings_ && bootDiagnosticsDone(elapsed)) {
         if (startupError_[0] != '\0') {
           showStartupError();
@@ -142,6 +144,9 @@ void App::loop() {
       break;
     case AppState::Settings:
       if (now - settingsPublishedMs_ >= SETTINGS_REFRESH_MS) publishSettings();  // live Wi-Fi
+      break;
+    case AppState::Recorder:
+      updateRecorder(now);
       break;
     case AppState::Error:
       if (errorRecoverable_ && elapsed >= STARTUP_ERROR_MS) {
@@ -165,6 +170,8 @@ bool App::bootDiagnosticsDone(uint32_t elapsedMs) const {
 void App::enter(AppState next) {
   if (next != state_) PLOG("BOOT", "state %s -> %s", appStateName(state_), appStateName(next));
   if (state_ == AppState::Diagnostics && next != AppState::Diagnostics) Diagnostics::ledOff();
+  if (next != AppState::Diagnostics) micScreen_ = false;
+  voiceMenu_ = false;  // AJUSTES always opens on its main list
   if (next != AppState::Playing) hideOsd();  // the OSD only lives over a programme
   state_ = next;
   stateSinceMs_ = millis();
@@ -193,6 +200,8 @@ void App::enter(AppState next) {
       break;
     case AppState::Error:
       break;  // published by fail() / showStartupError()
+    case AppState::Recorder:
+      break;  // published by startRecorder()
   }
 }
 
@@ -347,7 +356,7 @@ void App::pollBattery(uint32_t nowMs) {
       PLOG("BATTERY", "empty: %lu mV, standby", static_cast<unsigned long>(battery_.millivolts()));
     }
   }
-  if (batteryEmptyAtMs_ != 0 && nowMs - batteryEmptyAtMs_ >= BATTERY_EMPTY_NOTICE_MS) enterStandby();
+  if (batteryEmptyAtMs_ != 0 && nowMs - batteryEmptyAtMs_ >= BATTERY_EMPTY_NOTICE_MS) enterStandby(false);
   if (batteryWarning_ && state_ == AppState::Playing) {
     batteryWarning_ = false;
     showBatteryWarning();
@@ -379,8 +388,14 @@ void App::showBatteryWarning() {
 // Standby, like a TV's: hold CH- (or the web remote's power key). The picture squeezes into a
 // line and a dot with a crackle (the CRT switch-off), the panel, sound and Wi-Fi go off, the pins that could leak are latched and the
 // chip sleeps until a key (or BOOT) is pressed. Waking is a new boot: intro, last channel.
-void App::enterStandby() {
+void App::enterStandby(bool voiceAllowed) {
   PLOG("POWER", "standby");
+  powerDown();
+  if (voiceAllowed && voiceStandbyChosen()) voiceStandby();  // does not return
+  deepSleep();
+}
+
+void App::powerDown() {
   stopProgramme();  // the last picture stays on screen: it is what squeezes
   hideOsd();
   ui_.publish(UiState(Screen::PowerOff));
@@ -391,12 +406,15 @@ void App::enterStandby() {
   WiFi.disconnect(true, false);
   WiFi.mode(WIFI_OFF);
 
-  // Latched through the sleep: backlight and LED off, amplifier shut down.
+  // Backlight and LED off, amplifier shut down (deepSleep latches them through the sleep).
   ledcDetachPin(PIN_LCD_BL);
   pinMode(PIN_LCD_BL, OUTPUT);
   digitalWrite(PIN_LCD_BL, LOW);
   digitalWrite(PIN_LED_FRONT, LOW);
   digitalWrite(PIN_AMP_EN, HIGH);  // SC8002B shutdown
+}
+
+void App::deepSleep() {
   for (const int pin : {PIN_LCD_BL, PIN_AMP_EN, PIN_LED_FRONT}) gpio_hold_en(static_cast<gpio_num_t>(pin));
   gpio_deep_sleep_hold_en();
 
@@ -456,6 +474,9 @@ void App::onInput(InputEvent e) {
       } else {
         finishIntro();  // any other key skips it
       }
+      break;
+    case AppState::Recorder:
+      onRecorderInput(e);
       break;
     case AppState::Home:
     case AppState::Error:

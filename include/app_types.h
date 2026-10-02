@@ -10,6 +10,7 @@ enum class AppState : uint8_t {
   ChannelSwitch,
   Settings,
   Error,
+  Recorder,  // RETROTV Voice: GRABADORA, 3-2-1, REC, saved (AppVoice.cpp)
 };
 
 inline const char* appStateName(AppState s) {
@@ -21,6 +22,7 @@ inline const char* appStateName(AppState s) {
     case AppState::ChannelSwitch: return "CHANNEL_SWITCH";
     case AppState::Settings: return "SETTINGS";
     case AppState::Error: return "ERROR";
+    case AppState::Recorder: return "RECORDER";
   }
   return "?";
 }

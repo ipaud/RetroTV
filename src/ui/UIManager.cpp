@@ -174,6 +174,15 @@ void UIManager::renderFrame(Arduino_GFX& gfx, uint32_t nowMs, ClipRect& overlay)
     case Screen::Error:
       if (changed) ui::drawError(gfx, current_);
       break;
+    case Screen::Recorder:  // 4 updates a second: the card once, then only the body
+    case Screen::Messages:
+      if (newScreen) ui::drawMicCard(gfx, current_, false);
+      if (changed) ui::drawRecorderBody(gfx, current_);
+      break;
+    case Screen::Microphone:  // ~15 updates a second: the card once, then only the meter and numbers
+      if (newScreen) ui::drawMicCard(gfx, current_, true);
+      if (changed) ui::drawMicMeter(gfx, current_);
+      break;
     case Screen::Teletext:
       if (newScreen || teletextChanged) {
         ui::drawTeletext(gfx, teletext_, teletextDrawn_, newScreen, staticBand_, STATIC_BAND_ROWS);

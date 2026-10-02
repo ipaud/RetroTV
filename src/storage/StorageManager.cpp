@@ -1,6 +1,7 @@
 #include "storage/StorageManager.h"
 
 #include <SD_MMC.h>
+#include <string.h>
 
 #include "app_types.h"
 #include "board_config.h"
@@ -56,6 +57,35 @@ bool StorageManager::writeFileAtomic(const char* path, const char* data, size_t 
     return false;
   }
   return SD_MMC.rename(tmp, path);
+}
+
+bool StorageManager::removeFile(const char* path) { return mounted() && SD_MMC.remove(path); }
+
+bool StorageManager::makeDirs(const char* path) {
+  if (!mounted_) return false;
+  char part[96];
+  const size_t len = strlen(path);
+  if (len >= sizeof(part)) return false;
+  for (size_t i = 1; i <= len; ++i) {
+    if (path[i] != '/' && path[i] != '\0') continue;
+    memcpy(part, path, i);
+    part[i] = '\0';
+    if (!SD_MMC.exists(part) && !SD_MMC.mkdir(part)) return false;
+  }
+  return true;
+}
+
+size_t StorageManager::listNames(const char* dir, bool (*accept)(const char* name), char* names, size_t nameLen,
+                                 size_t max) const {
+  fs::File folder = open(dir);
+  if (!folder || !folder.isDirectory()) return 0;
+  size_t n = 0;
+  for (fs::File f = folder.openNextFile(); f && n < max; f = folder.openNextFile()) {
+    if (f.isDirectory() || !accept(f.name())) continue;
+    const int w = snprintf(names + n * nameLen, nameLen, "%s", f.name());
+    if (w > 0 && static_cast<size_t>(w) < nameLen) ++n;
+  }
+  return n;
 }
 
 bool StorageManager::ensureMounted() { return mounted_ || begin(); }

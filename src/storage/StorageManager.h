@@ -40,6 +40,11 @@ class StorageManager {
   // FAT has no atomic replace; if the cut falls between the remove and the rename, begin() puts
   // the .tmp back.
   bool writeFileAtomic(const char* path, const char* data, size_t len);
+  bool removeFile(const char* path);
+  // Creates a folder and its parents (true when it exists afterwards).
+  bool makeDirs(const char* path);
+  // File names (not paths) in a folder that `accept` takes, in directory order, rows of nameLen.
+  size_t listNames(const char* dir, bool (*accept)(const char* name), char* names, size_t nameLen, size_t max) const;
 
  private:
   bool mount();

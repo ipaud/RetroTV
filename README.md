@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PlatformIO-espressif32%406.9.0-F5822A?logo=platformio&logoColor=white" alt="PlatformIO">
   <img src="https://img.shields.io/badge/Arduino%20core-2.0.17-00979D?logo=arduino&logoColor=white" alt="Arduino core 2.0.17">
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17">
-  <img src="https://img.shields.io/badge/tests-541%20comprobaciones-2EA44F" alt="541 comprobaciones">
+  <img src="https://img.shields.io/badge/tests-658%20comprobaciones-2EA44F" alt="658 comprobaciones">
   <img src="https://img.shields.io/badge/versi%C3%B3n-0.2.0--alpha2-555" alt="Versión 0.2.0-alpha2">
 </p>
 
@@ -45,6 +45,9 @@ su número en pantalla. **No parece un reproductor de archivos: parece una tele.
   la tele.
 - 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos, guía y ajustes, sin app ni
   nube. Cuatro diseños de mandos de época, que se cambian deslizando el dedo. Un canal enseña un QR para abrirlo.
+- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: dos palmadas la apagan y dos más la encienden
+  (STANDBY VOZ), tres cambian de canal. Una grabadora de mensajes de 15 s y un canal MENSAJES que los
+  pone. Todo en la tele, sin Internet; solo graba con ● REC en pantalla ([docs/VOICE.md](docs/VOICE.md)).
 - 🔋 **Portátil.** LiPo de 3000 mAh dentro, aviso en pantalla, reposo profundo (también solo, con la batería
   agotada) y encendido con cualquier tecla.
 
@@ -607,7 +610,7 @@ SDKROOT=$(xcrun --show-sdk-path) CXX=g++-16 tools/run_host_tests.sh   # GCC de H
 SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 ```
 
-Son 541 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
+Son 658 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
 bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi y batería), compiladas con clang, ASan y UBSan, más el autotest de `make_index.py`. No hace
 falta la placa. ArduinoJson se toma de `.pio/libdeps` y, si falta, se descarga con `pio pkg install`.
@@ -663,6 +666,8 @@ docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVI
 - [docs/TEST_PLAN.md](docs/TEST_PLAN.md): pruebas por fase con su resultado y la prueba de estabilidad de 100 cambios
   de canal. Lo que aún falta comprobar en la placa está marcado como REQUIRES HARDWARE TEST.
 - [docs/NETWORK_TUNING.md](docs/NETWORK_TUNING.md): medidas de Wi-Fi y de los directos (caudal, cortes, perfiles).
+- [docs/VOICE.md](docs/VOICE.md): RETROTV Voice, la capa opcional de micrófono y palmadas: arquitectura, calibración
+  con palmadas reales, privacidad, medidas y lo que falta (standby por palmadas, grabadora, wake word).
 - [docs/PROVIDERS.md](docs/PROVIDERS.md): fuentes de los canales del servidor, canales investigados y sus límites.
 - [server/README.md](server/README.md): RETROTV Server, su API y cómo montarlo en un NAS.
 

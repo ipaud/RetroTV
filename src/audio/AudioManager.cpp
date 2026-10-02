@@ -1,12 +1,14 @@
 #include "audio/AudioManager.h"
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <driver/i2s.h>
 
 #include "app_types.h"
 #include "board_config.h"
 #include "config.h"
 #include "es8311.h"
+#include "voice/MicMeter.h"
 
 namespace {
 
@@ -15,6 +17,16 @@ constexpr size_t BLOCK_FRAMES = 256;
 constexpr uint32_t SYNTH_TASK_STACK = 4096;
 constexpr uint8_t AMP_ON = LOW;  // SC8002B SHUTDOWN is active high
 constexpr uint8_t AMP_OFF = HIGH;
+
+#if PAUTV_MIC_ENABLED
+// One codec register over Wire (the driver keeps its own writer private).
+bool i2cWrite(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(I2C_ADDR_ES8311);
+  Wire.write(reg);
+  Wire.write(value);
+  return Wire.endTransmission() == 0;
+}
+#endif
 
 }  // namespace
 
@@ -25,7 +37,14 @@ bool AudioManager::begin(uint8_t userVolume) {
 
   i2sOk_ = initI2s();  // MCLK must be running before the codec is told to use it
   codecOk_ = i2sOk_ && initCodec();
-  if (codecOk_) setVolume(userVolume);
+  if (codecOk_) {
+    setVolume(userVolume);
+    // The ES8311 keeps its registers across an ESP32 reset (it stays powered, and es8311_init's
+    // reset only restarts its state machines): a TV restarted while muted would come back silent
+    // while it believes it has sound. The app always starts unmuted, so the codec does too.
+    setMuted(false);
+  }
+  micOk_ = codecOk_ && initMic();  // a microphone that fails leaves playback as it was
 
   requests_ = xQueueCreate(1, sizeof(SoundRequest));
   i2sLock_ = xSemaphoreCreateMutex();
@@ -47,7 +66,9 @@ const char* AudioManager::status() const {
 
 bool AudioManager::initI2s() {
   i2s_config_t cfg = {};
-  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX);
+  // With the microphone built in, RX runs next to TX on the same port: both share BCLK, WS and
+  // MCLK, so the playback format, DMA ring and latency stay exactly as they were.
+  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX | (PAUTV_MIC_ENABLED ? I2S_MODE_RX : 0));
   cfg.sample_rate = AUDIO_SAMPLE_RATE;
   cfg.bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT;
   cfg.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
@@ -69,7 +90,7 @@ bool AudioManager::initI2s() {
   pins.bck_io_num = PIN_I2S_BCLK;
   pins.ws_io_num = PIN_I2S_WS;
   pins.data_out_num = PIN_I2S_DOUT;
-  pins.data_in_num = I2S_PIN_NO_CHANGE;  // microphone unused in V0.1
+  pins.data_in_num = PAUTV_MIC_ENABLED ? PIN_I2S_DIN : I2S_PIN_NO_CHANGE;
   if (i2s_set_pin(I2S_PORT, &pins) != ESP_OK) {
     PLOG("AUDIO", "i2s_set_pin failed");
     return false;
@@ -97,8 +118,40 @@ bool AudioManager::initCodec() {
   return true;
 }
 
+// The analogue MEMS microphone on MIC1 (Freenove's echo sketch: es8311_microphone_config), with
+// our gains. es8311_init already powered the PGA and the ADC modulator.
+bool AudioManager::initMic() {
+#if PAUTV_MIC_ENABLED
+  if (es8311_microphone_config(codec_, false) != ESP_OK ||
+      es8311_microphone_gain_set(codec_, static_cast<es8311_mic_gain_t>(MIC_ADC_SCALE)) != ESP_OK) {
+    PLOG("MIC", "codec microphone setup failed: playback only");
+    return false;
+  }
+  // es8311_microphone_config writes REG17 = 0xC8 and REG14 = 0x1A; ours may differ.
+  if (!i2cWrite(0x17, MIC_ADC_VOLUME_REG17) || !i2cWrite(0x14, MIC_PGA_REG14)) {
+    PLOG("MIC", "codec microphone gain write failed: playback only");
+    return false;
+  }
+  PLOG("MIC", "ready: I2S RX on GPIO%d, ES8311 MIC1, PGA reg14=0x%02X, scale reg16=%u, ADC vol reg17=0x%02X",
+       PIN_I2S_DIN, MIC_PGA_REG14, MIC_ADC_SCALE, MIC_ADC_VOLUME_REG17);
+  return true;
+#else
+  return false;
+#endif
+}
+
+size_t AudioManager::readMic(int16_t* stereo, size_t frames, uint32_t timeoutMs) {
+  if (!micOk_) return 0;
+  size_t read = 0;
+  i2s_read(I2S_PORT, stereo, frames * 2 * sizeof(int16_t), &read, pdMS_TO_TICKS(timeoutMs));
+  return read / (2 * sizeof(int16_t));
+}
+
 void AudioManager::setVolume(uint8_t userVolume) {
   if (!codecOk_) return;
+#if PAUTV_MIC_ENABLED
+  fxUntilMs_.store(millis());
+#endif
   const int codec = codecVolumeFor(userVolume);
   if (es8311_voice_volume_set(codec_, codec, nullptr) != ESP_OK) {
     PLOG("AUDIO", "volume write failed");
@@ -109,6 +162,10 @@ void AudioManager::setVolume(uint8_t userVolume) {
 
 void AudioManager::setMuted(bool muted) {
   if (!codecOk_) return;
+#if PAUTV_MIC_ENABLED
+  fxUntilMs_.store(millis());  // the speaker pops as the DAC mutes: not a clap
+  muted_.store(muted);
+#endif
   if (es8311_voice_mute(codec_, muted) != ESP_OK) PLOG("AUDIO", "mute write failed");
 }
 
@@ -125,7 +182,11 @@ void AudioManager::noise(uint32_t ms, uint8_t levelPct) {
 void AudioManager::stopSound() { play(SoundRequest{SoundKind::Noise, 0, 0, 0}); }
 
 void AudioManager::play(const SoundRequest& r) {
-  if (ready_) xQueueOverwrite(requests_, &r);
+  if (!ready_) return;
+#if PAUTV_MIC_ENABLED
+  fxUntilMs_.store(millis() + r.durationMs);
+#endif
+  xQueueOverwrite(requests_, &r);
 }
 
 size_t AudioManager::writeStereo(const int16_t* stereo, size_t frames) {
@@ -149,6 +210,18 @@ size_t AudioManager::writePcm(const int16_t* pcm, size_t frames, uint8_t channel
       stereo[2 * i + 1] = channels > 1 ? src[1] : src[0];  // mono feeds both sides
     }
     const size_t written = writeStereo(stereo, n);
+#if PAUTV_MIC_ENABLED
+    // Heard once the DMA ring ahead of it drains. Muted, the speaker plays nothing.
+    if (written > 0) {
+      float sum = 0.0f;
+      for (size_t i = 0; i < written; ++i) {
+        const float v = playbackHighPass_.step(static_cast<float>(stereo[2 * i]));
+        sum += v * v;
+      }
+      const int16_t db10 = muted_.load() ? MIC_FLOOR_DB10 : micDb10(sqrtf(sum / written) / 32768.0f);
+      playback_.push(millis() + latencyFrames() * 1000 / AUDIO_SAMPLE_RATE, db10);
+    }
+#endif
     done += written;
     if (written < n) break;  // DAC stalled: report what went through
   }
