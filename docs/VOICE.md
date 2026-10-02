@@ -169,9 +169,11 @@ animado, picos −14 a −24 dBFS); no hacen nada porque una sola palmada no es 
 | + envolvente del programa | 30 min | 1 doble | 168 | la canción de la intro (caja sobre bajo) |
 | + envolvente por encima de 400 Hz | esa intro desde 0:00 (`T !ruta`), 2 min | 0 | 9 | — |
 | + brillo 18 % (la doble ya apaga) | esa intro desde 0:00, 3 min 50 s | 0 (1 suelta) | 26 sordos, 3–18 % | — |
+| la misma versión, prueba larga | el capítulo entero desde 0:00 y su vuelta, 30 min | 0 (3 sueltas) | 146 sordos, 3–18 % | — |
 
-La última versión solo se ha comprobado contra la escena que falló; falta una prueba larga completa. Los golpes sordos
-del programa llegaron al 18 %, justo en el límite: si aparece una doble falsa, el log dirá con qué brillo.
+La prueba larga (30 min, 2026-10-03) no dio ninguna doble ni apagado. Las 3 sueltas eran golpes del programa de
+28–38 % de agudos cuya subida en el programa (6,6–7,5 dB) quedó justo bajo los 8 dB del descarte; los sordos llegaron
+al 18 %, en el límite. Si aparece una doble falsa, el log dirá con qué brillo y con qué subida del programa.
 
 ## STANDBY VOZ (v0.2)
 
