@@ -39,6 +39,16 @@ static void testChannelNumbers() {
   CHECK(!parseChannelNumber(nullptr, n));
 }
 
+static void testLogoInk() {
+  CHECK(parseLogoInk("black") == LogoInk::Black);
+  CHECK(parseLogoInk("white") == LogoInk::White);
+  CHECK(parseLogoInk("") == LogoInk::Colour);
+  CHECK(parseLogoInk("BLACK") == LogoInk::Colour);  // exact names only
+  CHECK(parseLogoInk("red") == LogoInk::Colour);
+  CHECK(parseLogoInk(nullptr) == LogoInk::Colour);
+  CHECK(strcmp(LOGO_INK_SUFFIX[static_cast<size_t>(LogoInk::White)], ".white") == 0);
+}
+
 static void testStateJson() {
   RemoteState s;
   s.tuned = true;
@@ -155,6 +165,7 @@ static void testGuideJson() {
 void runWebTests() {
   testKeys();
   testChannelNumbers();
+  testLogoInk();
   testStateJson();
   testChannelsJson();
   testGuideJson();

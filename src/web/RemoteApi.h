@@ -17,6 +17,13 @@ bool parseRemoteKey(const char* name, InputEvent& out);
 // POST /api/channel?n=<number>: digits only, 1-999.
 bool parseChannelNumber(const char* text, uint16_t& out);
 
+// GET /api/logo?n=<number>&c=<ink>: the logo in colour (/retrotv/logos/<id>.png) or in one ink for
+// the remote designs with light or plain keys (<id>.black.png, <id>.white.png).
+enum class LogoInk : uint8_t { Colour = 0, Black = 1, White = 2 };
+constexpr size_t LOGO_INKS = 3;
+constexpr const char* LOGO_INK_SUFFIX[LOGO_INKS] = {"", ".black", ".white"};
+LogoInk parseLogoInk(const char* text);  // anything else (or nothing) is colour
+
 struct RemoteState {
   bool tuned = false;  // a channel is on (channel 0 exists)
   uint16_t channel = 0;

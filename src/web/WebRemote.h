@@ -46,7 +46,7 @@ class WebRemote {
  public:
   WebRemote();
   // Before begin(): neither ever changes. A logo is a PNG in PSRAM, kept for good.
-  void addLogo(uint16_t number, const uint8_t* png, size_t len);
+  void addLogo(uint16_t number, LogoInk ink, const uint8_t* png, size_t len);
   void setChannels(const ChannelManager& channels, uint64_t logoMask);
   bool begin();
   void announce(const char* ip);  // mDNS name and _http service, once the Wi-Fi is up
@@ -110,8 +110,8 @@ class WebRemote {
   uint32_t nextSeq_ = 0;
   struct Logo {
     uint16_t number;
-    const uint8_t* png;
-    size_t len;
+    const uint8_t* png[LOGO_INKS];  // null: that ink falls back to the colour one
+    size_t len[LOGO_INKS];
   };
   Logo logos_[MAX_CHANNELS] = {};
   size_t logoCount_ = 0;

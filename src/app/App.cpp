@@ -225,34 +225,49 @@ void App::pollInput(uint32_t nowMs) {
   }
 }
 
-// Channel logos for the web remote, /retrotv/logos/<channel id>.png: read once into PSRAM, so
-// serving them never competes with the video for the card. Returns the channels that have one.
+// One logo file into PSRAM, or null (missing, empty, too big, unreadable).
+static uint8_t* readLogo(const StorageManager& storage, const char* path, size_t& len) {
+  len = 0;
+  if (!storage.exists(path)) return nullptr;
+  fs::File f = storage.open(path);
+  const size_t size = f ? f.size() : 0;
+  uint8_t* png = size > 0 && size <= WEB_LOGO_MAX_BYTES
+                     ? static_cast<uint8_t*>(heap_caps_malloc(size, MALLOC_CAP_SPIRAM))
+                     : nullptr;
+  if (png != nullptr && f.read(png, size) == size) {
+    len = size;
+    return png;
+  }
+  PLOG("WEB", "logo %s skipped (%u bytes, max %u)", path, static_cast<unsigned>(size),
+       static_cast<unsigned>(WEB_LOGO_MAX_BYTES));
+  heap_caps_free(png);
+  return nullptr;
+}
+
+// Channel logos for the web remote, /retrotv/logos/<channel id>.png plus its .black.png and
+// .white.png versions: read once into PSRAM, so serving them never competes with the video for the
+// card. Returns the channels that have one (in colour; the one-ink versions are optional).
 uint64_t App::loadWebLogos() {
   uint64_t mask = 0;
   size_t loaded = 0;
   size_t bytes = 0;
   for (size_t i = 0; i < channels_.count() && i < 64; ++i) {
     const Channel& c = channels_.at(i);
-    char path[64];
-    snprintf(path, sizeof(path), "%s/%s.png", sdpath::LOGOS, c.id);
-    if (!c.enabled || !storage_.exists(path)) continue;
-    fs::File f = storage_.open(path);
-    const size_t len = f ? f.size() : 0;
-    uint8_t* png = len > 0 && len <= WEB_LOGO_MAX_BYTES
-                       ? static_cast<uint8_t*>(heap_caps_malloc(len, MALLOC_CAP_SPIRAM))
-                       : nullptr;
-    if (png != nullptr && f.read(png, len) == len) {
-      web_.addLogo(c.number, png, len);
-      mask |= 1ull << i;
+    if (!c.enabled) continue;
+    for (size_t ink = 0; ink < LOGO_INKS; ++ink) {
+      if (ink > 0 && !((mask >> i) & 1ull)) break;  // no colour logo: no versions either
+      char path[80];
+      snprintf(path, sizeof(path), "%s/%s%s.png", sdpath::LOGOS, c.id, LOGO_INK_SUFFIX[ink]);
+      size_t len = 0;
+      const uint8_t* png = readLogo(storage_, path, len);
+      if (png == nullptr) continue;
+      web_.addLogo(c.number, static_cast<LogoInk>(ink), png, len);
+      if (ink == 0) mask |= 1ull << i;
       ++loaded;
       bytes += len;
-    } else {
-      PLOG("WEB", "logo %s skipped (%u bytes, max %u)", path, static_cast<unsigned>(len),
-           static_cast<unsigned>(WEB_LOGO_MAX_BYTES));
-      heap_caps_free(png);
     }
   }
-  if (loaded > 0) PLOG("WEB", "%u channel logos, %u KB in PSRAM", static_cast<unsigned>(loaded), static_cast<unsigned>(bytes / 1024));
+  if (loaded > 0) PLOG("WEB", "%u channel logo files, %u KB in PSRAM", static_cast<unsigned>(loaded), static_cast<unsigned>(bytes / 1024));
   return mask;
 }
 

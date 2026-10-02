@@ -55,8 +55,19 @@ bool queryValue(httpd_req_t* req, const char* key, char* value, size_t cap) {
 
 WebRemote::WebRemote() : gate_(esp_random) {}
 
-void WebRemote::addLogo(uint16_t number, const uint8_t* png, size_t len) {
-  if (server_ == nullptr && logoCount_ < MAX_CHANNELS) logos_[logoCount_++] = Logo{number, png, len};
+void WebRemote::addLogo(uint16_t number, LogoInk ink, const uint8_t* png, size_t len) {
+  if (server_ != nullptr) return;
+  Logo* l = nullptr;
+  for (size_t i = 0; i < logoCount_ && l == nullptr; ++i) {
+    if (logos_[i].number == number) l = &logos_[i];
+  }
+  if (l == nullptr) {
+    if (logoCount_ >= MAX_CHANNELS) return;
+    l = &logos_[logoCount_++];
+    *l = Logo{number, {}, {}};
+  }
+  l->png[static_cast<size_t>(ink)] = png;
+  l->len[static_cast<size_t>(ink)] = len;
 }
 
 void WebRemote::setChannels(const ChannelManager& channels, uint64_t logoMask) {
@@ -205,10 +216,12 @@ esp_err_t WebRemote::onLogo(httpd_req_t* req) {
   char value[VALUE_CAP];
   uint16_t number = 0;
   if (queryValue(req, "n", value, sizeof(value)) && parseChannelNumber(value, number)) {
+    const size_t ink = static_cast<size_t>(parseLogoInk(queryValue(req, "c", value, sizeof(value)) ? value : nullptr));
     for (size_t i = 0; i < self->logoCount_; ++i) {
       const Logo& l = self->logos_[i];
-      if (l.number == number) {
-        return respond(req, "image/png", reinterpret_cast<const char*>(l.png), static_cast<ssize_t>(l.len),
+      const size_t use = l.png[ink] != nullptr ? ink : 0;
+      if (l.number == number && l.png[use] != nullptr) {
+        return respond(req, "image/png", reinterpret_cast<const char*>(l.png[use]), static_cast<ssize_t>(l.len[use]),
                        "max-age=86400");
       }
     }

@@ -45,6 +45,12 @@ bool parseChannelNumber(const char* text, uint16_t& out) {
   return true;
 }
 
+LogoInk parseLogoInk(const char* text) {
+  if (text != nullptr && strcmp(text, "black") == 0) return LogoInk::Black;
+  if (text != nullptr && strcmp(text, "white") == 0) return LogoInk::White;
+  return LogoInk::Colour;
+}
+
 size_t writeStateJson(const RemoteState& state, char* out, size_t cap) {
   JsonDocument doc;
   if (state.tuned) {

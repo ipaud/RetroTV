@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PlatformIO-espressif32%406.9.0-F5822A?logo=platformio&logoColor=white" alt="PlatformIO">
   <img src="https://img.shields.io/badge/Arduino%20core-2.0.17-00979D?logo=arduino&logoColor=white" alt="Arduino core 2.0.17">
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17">
-  <img src="https://img.shields.io/badge/tests-513%20comprobaciones-2EA44F" alt="513 comprobaciones">
+  <img src="https://img.shields.io/badge/tests-541%20comprobaciones-2EA44F" alt="541 comprobaciones">
   <img src="https://img.shields.io/badge/versi%C3%B3n-0.2.0--alpha2-555" alt="Versión 0.2.0-alpha2">
 </p>
 
@@ -43,8 +43,8 @@ su número en pantalla. **No parece un reproductor de archivos: parece una tele.
 - 📟 **Teletexto con la guía real.** Qué echa ahora cada canal, cuánto le queda y qué viene después.
 - 📡 **Directos por Wi-Fi.** Un servidor en casa (RETROTV Server) transcodifica directos de 3Cat, RTVE y Pluto TV para
   la tele.
-- 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos y ajustes, sin app ni nube.
-  Un canal enseña un QR para abrirlo.
+- 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos, guía y ajustes, sin app ni
+  nube. Cuatro diseños de mandos de época, que se cambian deslizando el dedo. Un canal enseña un QR para abrirlo.
 - 🔋 **Portátil.** LiPo de 3000 mAh dentro, aviso en pantalla, reposo profundo (también solo, con la batería
   agotada) y encendido con cualquier tecla.
 
@@ -194,6 +194,10 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
   con un rayo amarillo; el mando web pone `CARGANDO 78% ⚡`. La placa no tiene ningún pin que diga si hay cable: la tele
   lo deduce del salto de ~100 mV que da la lectura al enchufar o desenchufar y, si se encendió ya enchufada, de que la
   tensión suba durante unos minutos. Mientras carga, el porcentaje marca algo de más (es la tensión de carga).
+- **Medido** (2026-10-02, por el USB del Mac y con la tele encendida): del 81 % al 99 % en unas 2 h 45 min. La última
+  hora la tensión apenas sube (el cargador mantiene la tensión y baja la corriente) y se queda en ~4,19 V leídos: ahí ya
+  está llena. Si la tele se reinicia enchufada con la batería casi llena, puede no marcar CARGANDO, porque la tensión ya
+  no sube.
 - **Batería agotada:** si se queda en el 2 % (~3,42 V) durante unos 30 s, sale "BATERIA / AGOTADA: SE APAGA" y la
   tele pasa a reposo, para no vaciar la celda. Al encenderla con la batería aún agotada se vuelve a apagar; con el
   USB-C enchufado, no.
@@ -207,6 +211,11 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
 
 ## Mando web
 
+<p align="center">
+  <img src="docs/img/mandos.jpg" width="100%" alt="Los cuatro diseños del mando web con una parrilla de ejemplo: CLÁSICO, oscuro con pantalla verde; NEGRO, con teclas beige, pantalla naranja y un panel con volumen, INFO redondo y canal en naranja; PLATA, plateado con teclas de colores y un aro de cruceta; GRIS, con cabeza redonda que lleva volumen, encendido rosa y canal">
+  <br><sub>De izquierda a derecha: CLÁSICO, NEGRO, PLATA y GRIS, con canales y logos de ejemplo.</sub>
+</p>
+
 <img src="docs/img/sticker.png" width="300" align="right" alt="Pegatina trasera de RETROTV con el QR del mando y las instrucciones de encendido">
 
 Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a la misma red. Si el móvil no resuelve
@@ -216,7 +225,19 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
   uno. La pantalla de arriba muestra el canal y el volumen actuales. Los canales remotos llevan un punto rojo.
 - **Cómo funciona:** las órdenes entran por el mismo camino que los mandos físicos. Un salto directo pasa por la
   estática y el destello, como un zapeo.
-- **Dónde vive:** la página la sirve la propia tele, sin nube y sin el Mac. Pesa unos 24 KB y funciona sin Internet.
+- **Dónde vive:** la página la sirve la propia tele, sin nube y sin el Mac. Pesa unos 38 KB y funciona sin Internet.
+- **Cuatro mandos (botón MANDO, o deslizando el dedo a un lado):** cada uno con la forma, los colores y la colocación
+  de un mando de verdad:
+  - CLÁSICO, el de siempre;
+  - NEGRO, de televisor de los 90: teclas beige, canal en naranja, pantalla fluorescente y un panel hundido con
+    volumen, un INFO redondo como un joystick y canal, encima de los canales; logos en negro;
+  - PLATA, de los 2000: plateado cepillado, teclas de colores, un gran aro que hace de cruceta (CH+ arriba, CH−
+    abajo, VOL− y VOL+ a los lados, INFO en medio) y GUÍA en la píldora azul del MENU; logos en negro;
+  - GRIS, europeo de cabeza redonda: la cabeza, más ancha que el cuerpo, lleva volumen, canal, encendido y silencio;
+    logos en blanco.
+  Cada móvil recuerda el suyo, y `http://retrotv.local/?skin=negro` (o `plata`, `gris`) abre uno directamente.
+<img src="docs/img/guia.jpg" width="260" align="right" alt="La guía del mando web: cada canal con su logo, el capítulo de ahora con una barra de progreso y los minutos que quedan, y los siguientes con su hora">
+
 - **Guía (botón GUÍA, o `http://retrotv.local/#guia`):** cada canal con su logo, lo que echa ahora con su barra y los
   minutos que quedan, y los tres siguientes con su hora; tocar uno lo sintoniza. Es la misma programación que el
   teletexto. La tele solo la prepara mientras alguien la mira: lee la de cada canal en segundo plano (unos 25 s la
@@ -225,8 +246,13 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
   `X-RETROTV`, así que otra web abierta en el móvil no puede mandarlas.
 
 **Logos de los canales:** `/retrotv/logos/<id del canal>.png` en la SD (el `id` de `channels.json`).
-- **Formato:** 180×80 px, con su propio fondo; se ven a la mitad y quedan nítidos en pantallas retina. Hasta 32 KB
-  cada uno. `tools/make_logo.py` los prepara.
+- **Formato:** PNG de 360×160 px con fondo transparente, hasta 32 KB cada uno. Se ven a una cuarta parte, nítidos en
+  pantallas retina. `tools/make_logo.py <archivo|url> <id> <carpeta>` los prepara: recorta, iguala el peso visual
+  (una palabra fina ocupa más que un bloque macizo) y aclara los logos negros, que no se verían sobre las teclas oscuras.
+  Para un logo blanco impreso sobre una caja negra, el modo `mono` deja solo las letras.
+- **Tres versiones:** `<id>.png` en color, `<id>.black.png` en negro (para las teclas claras) y `<id>.white.png` en
+  blanco. Un logo plano sale en silueta; uno con letras perfiladas, en tonos de una sola tinta (`--black` y `--white`
+  eligen `solid` o `tonal`). Si falta una versión, la tele sirve la de color.
 - **Carga:** la tele los lee a PSRAM al arrancar, así que nunca compiten con el vídeo por la SD. El móvil los guarda
   un día. Sin logo, el canal enseña su nombre.
 - **Derechos:** los logos son marcas de sus dueños. Van solo en tu SD, **nunca en el repo**, igual que los capítulos.
@@ -259,7 +285,7 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
 
 - `GET /api/state`: canal, nombre, volumen, silencio, pantalla, batería (`battery` en %, `battery_mv`, `charging`) y `list`;
 - `GET /api/channels`: la lista de canales activos (`logo: true` si tiene logo);
-- `GET /api/logo?n=<número>`: el PNG del logo;
+- `GET /api/logo?n=<número>[&c=black|white]`: el PNG del logo, en color o en una tinta (si no hay esa versión, en color);
 - `GET /api/guide`: la guía (`{"pending":true}` mientras se prepara; horas en segundos del reloj de la tele);
 - `POST /api/key?k=next|prev|volup|voldown|mute|info`;
 - `POST /api/channel?n=<número>`.
@@ -416,7 +442,7 @@ el demo, 2 HLS TEST y 10 SX3. El número de la tele (`number`) lo eliges tú.
 /retrotv/media/channel01/       capítulos de una serie (.mjpeg + .aac + .idx con el mismo nombre)
 /retrotv/media/channel02/
 /retrotv/media/demo/            clip de demostración
-/retrotv/logos/<id>.png         logos de los canales para el mando web (opcional)
+/retrotv/logos/<id>.png         logos de los canales para el mando web (opcional), más <id>.black.png y <id>.white.png
 /retrotv/system/intro.mjpeg (+ .aac) vídeo al encender, opcional (convert_video.sh <carpeta> /retrotv/system;
                     con RECORTE_4_3=1 si es 4:3 dentro de 16:9). Tras él, la transición de canal
 /retrotv/sounds/                    reservada para versiones futuras
@@ -581,7 +607,7 @@ SDKROOT=$(xcrun --show-sdk-path) CXX=g++-16 tools/run_host_tests.sh   # GCC de H
 SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 ```
 
-Son 513 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
+Son 541 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
 bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi y batería), compiladas con clang, ASan y UBSan, más el autotest de `make_index.py`. No hace
 falta la placa. ArduinoJson se toma de `.pio/libdeps` y, si falta, se descarga con `pio pkg install`.

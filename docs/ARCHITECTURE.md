@@ -71,7 +71,7 @@ Cómo está construido el firmware y por qué. Los pines están en [HARDWARE.md]
 | `loopTask` | 1 | 1 | App, entrada, I2C, Wi-Fi, NVS | Duerme 10 ms por vuelta |
 | `video` | 0 | 2 | Lee de la SD (o de la red), acompasa, decodifica JPEG | Lejos del audio. Convive con Wi-Fi/lwIP (prio 18–23). `vTaskDelay(1)` por fotograma para que IDLE0 alimente el watchdog, que **no se desactiva** |
 | `net` | 0 | 3 | Canales remotos: DNS/mDNS, sesión, dos sockets → anillos | Toda la espera de red vive aquí, nunca en el loop ni en el audio. Duerme 1 tick por vuelta: IDLE0 y el decodificador siempre tienen el core |
-| `httpd` | 0 | 1 | Mando web (`src/web/`): la página, `/api/state`, `/api/channels`, y las órdenes a una cola que vacía el loop. Los ajustes (`/api/config/`) también pasan al loop, que es el dueño de la SD, la Wi-Fi y NVS; el servidor espera su respuesta hasta 6 s | Por debajo de todo lo que reproduce. Una petición son unos cientos de bytes; nunca toca el reproductor ni la pantalla. Como mucho 5 sockets, y cada respuesta cierra su conexión |
+| `httpd` | 0 | 3 | Mando web (`src/web/`): la página (un solo HTML con sus cuatro diseños, que solo cambian el CSS), `/api/state`, `/api/channels`, `/api/guide`, `/api/logo` (cada logo en color, negro y blanco, leído a PSRAM al arrancar) y las órdenes a una cola que vacía el loop. Los ajustes (`/api/config/`) también pasan al loop, que es el dueño de la SD, la Wi-Fi y NVS; el servidor espera su respuesta hasta 6 s | Por debajo de todo lo que reproduce. Una petición son unos cientos de bytes; nunca toca el reproductor ni la pantalla. Como mucho 5 sockets, y cada respuesta cierra su conexión |
 
 El reparto está comentado en `include/config.h` (`*_TASK_CORE`, `*_TASK_PRIO`).
 
