@@ -32,6 +32,33 @@ su número en pantalla. **No parece un reproductor de archivos: parece una tele.
 > microSD. Las imágenes de este README son material propio del proyecto: renders de la carcasa, la intro y el vídeo
 > del canal 0.
 
+
+## Inicio rápido
+
+Si quieres verla funcionando lo antes posible:
+
+```sh
+git clone https://github.com/ipaud/RetroTV.git
+cd RetroTV
+platformio run --target upload
+tools/convert_video.sh ~/Videos/MiSerie /retrotv/media/channel01 /Volumes/RETROTV
+```
+
+Después mete la microSD en la placa y enciéndela. En el primer arranque se crea la estructura `/retrotv`; edita
+`/retrotv/config/channels.json` para definir tus canales.
+
+**Necesitas:** una Freenove ESP32-S3 Display 2.8", microSD FAT32/MBR, PlatformIO, FFmpeg y Python 3.
+
+- ¿Quieres construir la carcasa y cablear los mandos? → [Guía de construcción y BOM](docs/BUILD.md)
+- ¿Quieres entender la electrónica? → [Hardware verificado](docs/HARDWARE.md)
+- ¿Quieres ver qué está probado realmente? → [Plan de pruebas](docs/TEST_PLAN.md)
+- ¿Quieres montar canales por red? → [RETROTV Server](server/README.md)
+- ¿Quieres contribuir? → [CONTRIBUTING.md](CONTRIBUTING.md)
+
+> [!WARNING]
+> RETROTV está en **alpha**. La unidad documentada está probada en hardware real, pero hay pruebas físicas todavía
+> pendientes; consulta `docs/TEST_PLAN.md` antes de asumir que una función está validada en todas las variantes.
+
 ## Qué hace
 
 - 📺 **Canales en emisión.** Cada canal es una programación en bucle anclada a la hora real: al sintonizar entras en el
@@ -50,14 +77,15 @@ su número en pantalla. **No parece un reproductor de archivos: parece una tele.
 
 ## Índice
 
+- [Inicio rápido](#inicio-rápido)
 - [Cómo funciona](#cómo-funciona)
-- [Hardware](#hardware)
+- [Hardware](#hardware) · [Construcción y BOM](docs/BUILD.md)
 - [Primeros pasos](#primeros-pasos)
 - [Controles](#controles) · [Mando web](#mando-web)
 - [Canales](#canales-retrotvconfigchannelsjson) · [En emisión](#en-emisión) · [Teletexto](#teletexto) ·
   [Canales por red](#canales-por-red-retrotv-server)
 - [microSD](#microsd) · [Convertir capítulos](#convertir-capítulos) · [Wi-Fi](#wi-fi)
-- [Desarrollo](#desarrollo) · [Documentación](#documentación) · [Créditos y licencias](#créditos-y-licencias)
+- [Desarrollo](#desarrollo) · [Contribuir](CONTRIBUTING.md) · [Documentación](#documentación) · [Créditos y licencias](#créditos-y-licencias)
 
 ## Cómo funciona
 
