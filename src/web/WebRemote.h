@@ -21,7 +21,7 @@ struct RemoteCommand {
 // A settings request, run by the App's loop (it owns the SD, the Wi-Fi and the settings).
 enum class ConfigOp : uint8_t {
   Info, WifiList, WifiAdd, WifiRemove, WifiScanStart, WifiScanResults,
-  DisplayGet, DisplaySet, ChannelsList, ChannelSet, Reboot,
+  DisplayGet, DisplaySet, ChannelsList, ChannelSet, Reboot, VoiceGet, VoiceSet,
 };
 struct ConfigRequest {
   ConfigOp op = ConfigOp::Info;
@@ -32,6 +32,7 @@ struct ConfigRequest {
   int volume = -1;
   uint16_t number = 0;
   bool enabled = false;
+  VoiceChange voice;
 };
 
 // Web remote served by the TV on port 80, http://retrotv.local on the same Wi-Fi: the page,

@@ -101,6 +101,12 @@ void App::pollConfigRequests(uint32_t nowMs) {
       status == 200 ? reply.ok() : reply.error(status, error);
       break;
     }
+    case ConfigOp::VoiceSet:
+      applyVoiceChange(r.voice);
+      [[fallthrough]];
+    case ConfigOp::VoiceGet:
+      reply.json(voiceConfigJson(reply.out, reply.cap));
+      break;
     case ConfigOp::Reboot:
       settings_.flush();
       rebootAtMs_ = nowMs + REBOOT_DELAY_MS;

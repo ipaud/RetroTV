@@ -85,9 +85,10 @@ void App::publishVoiceSettings() {
   s.addLine("MICROFONO  %s", settings_.micOn() ? "ON" : "OFF");
   s.addLine(settings_.micOn() ? Tone::Normal : Tone::Dim, "PALMADAS   %s", settings_.clapOn() ? "ON" : "OFF");
   s.addLine(claps ? Tone::Normal : Tone::Dim, "SENSIBLE   %u", settings_.clapSensitivity());
-  s.addLine(claps && PAUTV_CLAP_WAKE_ENABLED ? Tone::Normal : Tone::Dim, "APAGADO    %s",
-            settings_.voiceStandby() ? "STANDBY VOZ" : "AHORRO MAX");
-  s.addLine(claps && settings_.voiceStandby() ? Tone::Normal : Tone::Dim, "LED ESCUCHA %s",
+  const bool voiceOff = settings_.voiceStandby() || !PAUTV_HAS_KEYS;  // without keys, the only way off
+  s.addLine(claps && PAUTV_CLAP_WAKE_ENABLED && PAUTV_HAS_KEYS ? Tone::Normal : Tone::Dim, "APAGADO    %s",
+            voiceOff ? "STANDBY VOZ" : "AHORRO MAX");
+  s.addLine(claps && voiceOff ? Tone::Normal : Tone::Dim, "LED ESCUCHA %s",
             settings_.listenLed() ? "ON" : "OFF");
   s.addLine(settings_.micOn() && PAUTV_RECORDER_ENABLED ? Tone::Normal : Tone::Dim, "GRABAR MENSAJE");
   s.selected = voiceIndex_;
@@ -124,7 +125,7 @@ void App::onVoiceSettingsInput(InputEvent e) {
           break;
         }
         case VoiceItem::PowerMode:
-          settings_.setVoiceStandby(!settings_.voiceStandby());
+          if (PAUTV_HAS_KEYS) settings_.setVoiceStandby(!settings_.voiceStandby());  // without keys: STANDBY VOZ only
           break;
         case VoiceItem::ListenLed:
           settings_.setListenLed(!settings_.listenLed());
@@ -177,9 +178,36 @@ bool App::onMicScreenInput(InputEvent e) {
   return true;  // the rest does nothing here: a test tone would only measure itself
 }
 
-bool App::voiceStandbyChosen() const {
-  return PAUTV_CLAP_WAKE_ENABLED && mic_.running() && settings_.micOn() && settings_.clapOn() &&
-         settings_.voiceStandby();
+// The web remote's VOZ section: the same settings as AJUSTES > VOZ on the TV, saved the same way.
+void App::applyVoiceChange(const VoiceChange& c) {
+  if (c.mic >= 0) settings_.setMicOn(c.mic == 1);
+  if (c.claps >= 0) settings_.setClapOn(c.claps == 1);
+  if (c.sensitivity >= 0) {
+    const int s = (c.sensitivity + CLAP_SENSITIVITY_STEP / 2) / CLAP_SENSITIVITY_STEP * CLAP_SENSITIVITY_STEP;
+    settings_.setClapSensitivity(static_cast<uint8_t>(s > 100 ? 100 : s));
+  }
+  if (c.standbyVoice >= 0 && PAUTV_HAS_KEYS) settings_.setVoiceStandby(c.standbyVoice == 1);
+  if (c.led >= 0) settings_.setListenLed(c.led == 1);
+  applyVoiceSettings();
+  PLOG("WEB", "voice settings: mic=%u claps=%u sensitivity=%u standby=%s led=%u", settings_.micOn(), settings_.clapOn(),
+       settings_.clapSensitivity(), settings_.voiceStandby() ? "voice" : "deep", settings_.listenLed());
+  if (state_ == AppState::Settings && voiceMenu_) publishVoiceSettings();  // the TV shows the same menu
+}
+
+size_t App::voiceConfigJson(char* out, size_t cap) {
+  VoiceConfig c;
+  c.available = mic_.running();
+  c.mic = settings_.micOn();
+  c.claps = settings_.clapOn();
+  c.sensitivity = settings_.clapSensitivity();
+  c.standbyVoice = settings_.voiceStandby() || !PAUTV_HAS_KEYS;
+  c.standbyFixed = !PAUTV_HAS_KEYS;
+  c.led = settings_.listenLed();
+  return writeVoiceJson(c, out, cap);
+}
+
+bool App::voiceStandbyPossible() const {
+  return PAUTV_CLAP_WAKE_ENABLED && mic_.running() && settings_.micOn() && settings_.clapOn();
 }
 
 // STANDBY VOZ (docs/VOICE.md). powerDown() already played the CRT switch-off and turned off the
@@ -610,7 +638,9 @@ void App::pollClaps() {}
 void App::applyVoiceSettings() {}
 void App::publishVoiceSettings() {}
 void App::onVoiceSettingsInput(InputEvent) {}
-bool App::voiceStandbyChosen() const { return false; }
+bool App::voiceStandbyPossible() const { return false; }
+void App::applyVoiceChange(const VoiceChange&) {}
+size_t App::voiceConfigJson(char* out, size_t cap) { return writeVoiceJson(VoiceConfig{}, out, cap); }
 void App::voiceStandby() { deepSleep(); }
 void App::startRecorder() {}
 void App::updateRecorder(uint32_t) { enter(AppState::Playing); }

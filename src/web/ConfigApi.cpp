@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <utility>
+
 namespace {
 
 constexpr int BRIGHTNESS_MIN = 10;
@@ -114,6 +116,48 @@ bool parseDisplay(const char* body, size_t len, int& brightness, int& volume) {
   if (brightness != -1 && (brightness < BRIGHTNESS_MIN || brightness > 100)) return false;
   if (volume != -1 && (volume < 0 || volume > 100)) return false;
   return brightness != -1 || volume != -1;
+}
+
+bool parseVoice(const char* body, size_t len, VoiceChange& change) {
+  JsonDocument doc;
+  if (!parse(body, len, doc)) return false;
+  change = VoiceChange{};
+  bool any = false;
+  for (const auto& [key, field] : {std::pair<const char*, int8_t*>{"mic", &change.mic}, {"claps", &change.claps},
+                                   {"led", &change.led}}) {
+    if (doc[key].isNull()) continue;
+    if (!doc[key].is<bool>()) return false;
+    *field = doc[key].as<bool>() ? 1 : 0;
+    any = true;
+  }
+  if (!doc["sensitivity"].isNull()) {
+    if (!doc["sensitivity"].is<int>()) return false;
+    change.sensitivity = doc["sensitivity"];
+    if (change.sensitivity < 0 || change.sensitivity > 100) return false;
+    any = true;
+  }
+  if (!doc["standby"].isNull()) {
+    const char* s = doc["standby"].is<const char*>() ? doc["standby"].as<const char*>() : "";
+    if (strcmp(s, "voice") != 0 && strcmp(s, "deep") != 0) return false;
+    change.standbyVoice = strcmp(s, "voice") == 0 ? 1 : 0;
+    any = true;
+  }
+  return any;
+}
+
+size_t writeVoiceJson(const VoiceConfig& c, char* out, size_t cap) {
+  JsonDocument doc;
+  doc["available"] = c.available;
+  if (c.available) {
+    doc["mic"] = c.mic;
+    doc["claps"] = c.claps;
+    doc["sensitivity"] = c.sensitivity;
+    doc["standby"] = c.standbyVoice ? "voice" : "deep";
+    doc["standby_fixed"] = c.standbyFixed;
+    doc["led"] = c.led;
+  }
+  if (measureJson(doc) + 1 > cap) return 0;
+  return serializeJson(doc, out, cap);
 }
 
 bool parseChannelToggle(const char* body, size_t len, uint16_t& number, bool& enabled) {

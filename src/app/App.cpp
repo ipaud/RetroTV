@@ -11,10 +11,19 @@
 
 #include "board_config.h"
 #include "config.h"
+#include "power/Standby.h"
 
 void App::begin() {
   PLOG("BOOT", "RETROTV %s, reset reason %d", PAUTV_VERSION, static_cast<int>(esp_reset_reason()));
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1) PLOG("POWER", "switched on from standby");
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {  // button-less, asleep with a flat battery
+    const uint32_t mv = Diagnostics::readBatteryMv();
+    if (!flatCheckSwitchOn(mv, FLAT_RESUME_MV)) {
+      PLOG("POWER", "flat battery check: %lu mV, back to sleep", static_cast<unsigned long>(mv));
+      sleepUntilWoken();  // the pins are still latched off: nothing lit up
+    }
+    PLOG("POWER", "battery back (%lu mV): switching on", static_cast<unsigned long>(mv));
+  }
   // Standby latched these pins (backlight off, amplifier off, LED off): let go of them.
   gpio_deep_sleep_hold_dis();
   for (const int pin : {PIN_LCD_BL, PIN_AMP_EN, PIN_LED_FRONT}) gpio_hold_dis(static_cast<gpio_num_t>(pin));
@@ -389,13 +398,31 @@ void App::showBatteryWarning() {
 // line and a dot with a crackle (the CRT switch-off), the panel, sound and Wi-Fi go off, the pins that could leak are latched and the
 // chip sleeps until a key (or BOOT) is pressed. Waking is a new boot: intro, last channel.
 void App::enterStandby(bool voiceAllowed) {
+#if PAUTV_MIC_ENABLED
+  const bool voiceChosen = settings_.voiceStandby();  // AJUSTES > VOZ > APAGADO
+#else
+  const bool voiceChosen = false;
+#endif
+  const StandbyMode mode =
+      standbyMode(PAUTV_HAS_KEYS, voiceAllowed, voiceStandbyPossible(), voiceChosen, wifi_.online());
+  if (mode == StandbyMode::StayOn) {  // button-less, no claps, no Wi-Fi: nothing could switch it back on
+    PLOG("POWER", "no keys, no voice standby, no Wi-Fi: staying on");
+    OsdState o;
+    o.visible = true;
+    snprintf(o.title, sizeof(o.title), "NO SE APAGA");
+    snprintf(o.subtitle, sizeof(o.subtitle), "SIN WI-FI NI PALMADAS");
+    o.alert = true;
+    publishOsd(o, NO_OFF_NOTICE_MS);
+    return;
+  }
   PLOG("POWER", "standby");
-  powerDown();
-  if (voiceAllowed && voiceStandbyChosen()) voiceStandby();  // does not return
+  powerDown(mode == StandbyMode::Remote);
+  if (mode == StandbyMode::Voice) voiceStandby();    // these do not return
+  if (mode == StandbyMode::Remote) remoteStandby();
   deepSleep();
 }
 
-void App::powerDown() {
+void App::powerDown(bool keepWifi) {
   stopProgramme();  // the last picture stays on screen: it is what squeezes
   hideOsd();
   ui_.publish(UiState(Screen::PowerOff));
@@ -403,8 +430,10 @@ void App::powerDown() {
   settings_.flush();
   delay(poweroff::TOTAL_MS + 2 * DISPLAY_TICK_MS);  // let it play out; nothing else to do anymore
   display_.sleep();
-  WiFi.disconnect(true, false);
-  WiFi.mode(WIFI_OFF);
+  if (!keepWifi) {
+    WiFi.disconnect(true, false);
+    WiFi.mode(WIFI_OFF);
+  }
 
   // Backlight and LED off, amplifier shut down (deepSleep latches them through the sleep).
   ledcDetachPin(PIN_LCD_BL);
@@ -422,7 +451,10 @@ void App::deepSleep() {
   const uint32_t t0 = millis();
   while (buttons_.anyKeyDown() && millis() - t0 < STANDBY_RELEASE_WAIT_MS) delay(10);
   delay(BUTTON_DEBOUNCE_MS);
+  sleepUntilWoken();
+}
 
+void App::sleepUntilWoken() {
   // Any key wakes: the keys need their pull-ups kept on through the sleep (BOOT has its own).
   const uint64_t mask = Buttons::wakeMask();
   for (int pin = 0; pin < 64; ++pin) {
@@ -432,9 +464,53 @@ void App::deepSleep() {
   }
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
   esp_sleep_enable_ext1_wakeup(mask, ESP_EXT1_WAKEUP_ANY_LOW);
-  PLOG("POWER", "sleeping until a key is pressed");
+  if (!PAUTV_HAS_KEYS) {  // no key to press: wake now and then to see whether the battery is charging
+    esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(FLAT_CHECK_S) * 1000000ull);
+    PLOG("POWER", "sleeping; checking the battery every %lu s", static_cast<unsigned long>(FLAT_CHECK_S));
+  } else {
+    PLOG("POWER", "sleeping until a key is pressed");
+  }
   Serial.flush();
   esp_deep_sleep_start();
+}
+
+// Remote standby (button-less, claps not listening): powerDown() left only the Wi-Fi and the web server
+// on, so the remote can switch the TV on again: its power key, a channel or any other key restarts it,
+// the same boot as ever. The CPU slows down and the Wi-Fi naps between beacons. A flat battery still ends
+// in deepSleep(), which then wakes itself to see whether the cell is charging.
+void App::remoteStandby() {
+  PLOG("STANDBY", "remote standby: the web remote switches it on");
+  setCpuFrequencyMhz(REMOTE_STANDBY_CPU_MHZ);
+  WiFi.setSleep(true);
+  RemoteState s;
+  s.screen = "standby";
+  s.channelsVersion = web_.channelsVersion();
+  uint32_t batteryMs = millis() - BATTERY_READ_MS;
+  for (;;) {
+    const uint32_t now = millis();
+    wifi_.loop(now);
+    if (now - batteryMs >= BATTERY_READ_MS) {
+      batteryMs = now;
+      battery_.update(Diagnostics::readBatteryMv());
+      if (battery_.empty()) {
+        PLOG("STANDBY", "battery flat (%lu mV): deep sleep instead", static_cast<unsigned long>(battery_.millivolts()));
+        setCpuFrequencyMhz(240);
+        deepSleep();
+      }
+      s.battery = battery_.percent();
+      s.batteryMv = battery_.millivolts();
+      s.charging = battery_.charging();
+      web_.publish(s);
+    }
+    RemoteCommand c;
+    while (web_.poll(c)) {
+      if (c.pairCode != 0 || c.paired) continue;  // pairing waits until it is on
+      PLOG("STANDBY", "web remote: switching on");
+      Serial.flush();
+      ESP.restart();
+    }
+    vTaskDelay(pdMS_TO_TICKS(REMOTE_STANDBY_POLL_MS));
+  }
 }
 
 // The pilot light goes out for a moment with every order, like a 90s TV taking the remote's.

@@ -62,6 +62,8 @@ salvo la palabra de activación y los comandos, que no existen.
 | `PAUTV_WAKEWORD_ENABLED` | 0 | 0 | 0 | reservada: "HEY RETRO" no está implementado |
 | `PAUTV_VOICE_COMMANDS_ENABLED` | 0 | 0 | 0 | reservada: los comandos de voz no están implementados |
 
+Para la carcasa sin botones hay un tercer entorno, `voice_nokeys` = `voice` + `-DPAUTV_HAS_KEYS=0` (ver STANDBY VOZ).
+
 Cada parte se puede quitar por separado añadiendo su flag a 0 en `build_flags` del entorno `voice` (por ejemplo
 `-DPAUTV_RECORDER_ENABLED=0` deja palmadas sin grabadora). Compilado y comprobado (2026-10-03): `voice` sin
 grabadora, sin encender con palmadas y sin palmadas. Una combinación imposible (palmadas sin micrófono, encender con
@@ -237,6 +239,10 @@ siempre a STANDBY VOZ:
   el usuario prefirió dos; la tercera versión exige silencio antes y después.
 - No hay sonido propio que filtrar (el amplificador está apagado), así que el umbral es el de la sala.
 - Sin Wi-Fi el mando web no responde, igual que con el deep sleep.
+- **Carcasa sin botones** (`pio run -e voice_nokeys`, `PAUTV_HAS_KEYS 0`): apagar es STANDBY VOZ, porque del deep
+  sleep solo despertaría una tecla. Si las palmadas o el micrófono están desactivados, ⏻ apaga a STANDBY WI-FI (la
+  Wi-Fi sigue y el mando web la enciende); sin Wi-Fi tampoco, no se apaga ("NO SE APAGA"). Con la batería agotada, el deep sleep se despierta cada 5 min y arranca en cuanto la
+  batería lee 3,7 V o más (cargando). Lógica en `src/power/Standby.h`, con tests; serie `F` simula ese apagado.
 - Por serie (sin teclas): `q` apaga y `W` enciende desde STANDBY VOZ.
 
 ## Grabadora y canal MENSAJES (v0.3)
@@ -311,6 +317,9 @@ mensajes.
   (mantener CH+) vuelve.
 - **AJUSTES → VOZ:** MICROFONO ON/OFF (pausa la captura), PALMADAS ON/OFF, SENSIBLE 0–100 de 10 en 10, APAGADO
   (AHORRO MAX o STANDBY VOZ), LED ESCUCHA ON/OFF (el destello en STANDBY VOZ) y GRABAR MENSAJE.
+- **Mando web → AJUSTES → VOZ:** los mismos ajustes salvo GRABAR MENSAJE (`/api/config/voice`, con el móvil
+  emparejado). Un cambio desde el móvil se ve al momento si el menú VOZ está abierto en la tele. Sin teclas, APAGADO
+  sale fijo en STANDBY VOZ.
 - **Serie** (115200, compilación con `PAUTV_DEBUG_STATS`): `R` = grabar (o parar), `Y` = mensaje sintético, `E` =
   borrar los mensajes, `q` = apagar, `W` = encender desde STANDBY VOZ; `v` = MIC TEST, 10 s de
   `[MIC] rms=… peak=… clip=… overrun=… | clap floor=… thr=… claps=… long=… own=…`; `V` = pausa o reanuda la

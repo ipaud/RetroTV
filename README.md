@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PlatformIO-espressif32%406.9.0-F5822A?logo=platformio&logoColor=white" alt="PlatformIO">
   <img src="https://img.shields.io/badge/Arduino%20core-2.0.17-00979D?logo=arduino&logoColor=white" alt="Arduino core 2.0.17">
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17">
-  <img src="https://img.shields.io/badge/tests-658%20comprobaciones-2EA44F" alt="658 comprobaciones">
+  <img src="https://img.shields.io/badge/tests-684%20comprobaciones-2EA44F" alt="684 comprobaciones">
   <img src="https://img.shields.io/badge/versi%C3%B3n-0.2.0--alpha2-555" alt="Versión 0.2.0-alpha2">
 </p>
 
@@ -124,7 +124,9 @@ Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   el lateral. Dentro van el altavoz, bajo la rejilla del techo, y la LiPo, detrás de la placa. Está pensada para PLA o
   PETG con patas de TPU (unas 7 h y ~100 g). **Los archivos de la carcasa no están en este repositorio** y aún no se
   publican como imprimibles. Las carcasas anteriores (v5 y las de 97 y 112 mm de fondo) quedan superadas: sus cotas y
-  la posición de su batería no valen para la v9.
+  la posición de su batería no valen para la v9. La **v10** es la v9 en dos piezas; su variante **sin botones** (solo
+  LED) se maneja con el mando web y las palmadas y lleva el firmware `voice_nokeys`
+  ([docs/HARDWARE.md](docs/HARDWARE.md#integración-física-en-la-carcasa)).
 
 <p align="center">
   <img src="docs/img/case-back.jpg" width="60%" alt="Render de la tele90 v9 por detrás: rejillas, USB-C en el lateral y la pegatina con el QR del mando">
@@ -145,7 +147,8 @@ Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 1. **Tarjeta.** Formatea una microSD en **FAT32 con esquema MBR**. En la Utilidad de Discos de macOS: "MS-DOS (FAT)"
    con "Registro de arranque principal".
 2. **Firmware.** Conecta la placa por USB-C y ejecuta `platformio run --target upload` (el normal). La versión con
-   micrófono, palmadas y grabadora es `platformio run -e voice --target upload` ([docs/VOICE.md](docs/VOICE.md)).
+   micrófono, palmadas y grabadora es `platformio run -e voice --target upload` ([docs/VOICE.md](docs/VOICE.md)); para
+   la carcasa sin botones, `-e voice_nokeys`, que nunca deja la tele en un reposo del que solo despierta una tecla.
 3. **Capítulos.** Con la SD en el ordenador:
    `tools/convert_video.sh ~/Videos/MiSerie /retrotv/media/channel01 /Volumes/RETROTV`.
    Opcional: `tools/make_demo_clip.sh /Volumes/RETROTV` para el clip de demo.
@@ -282,6 +285,9 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
 - **Wi-Fi:** las redes guardadas (sin contraseña), BUSCAR REDES para las de 2,4 GHz al alcance y AÑADIR RED, que la
   guarda en `wifi.json` de la SD. Las redes de `secrets.h` van en el firmware y no se pueden borrar desde aquí.
 - **Pantalla y sonido:** brillo y volumen, guardados como con los mandos.
+- **Voz** (solo con el firmware `voice`): micrófono, palmadas, sensibilidad, apagar escuchando palmadas (STANDBY VOZ)
+  y el destello del piloto al oír una palmada; los mismos ajustes que AJUSTES → VOZ en la tele. La grabadora no está
+  aquí a propósito: el mando no tiene PIN y cualquiera en la Wi-Fi podría grabar la sala.
 - **Canales:** activa o desactiva cada canal. Se guarda en `channels.json` de la SD; el zapeo y el mando se saltan los
   desactivados.
 - **Información:** versión, Wi-Fi, IP, SD, memoria y REINICIAR LA TELE.
@@ -310,7 +316,9 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
 
 Los `POST` necesitan la cabecera `X-RETROTV: 1`. Los ajustes van en `/api/config/…`:
 - se empareja con `POST /api/config/pair/start` y `POST /api/config/pair {"code"}`, que devuelve un `token`;
-- el resto necesita la cabecera `X-RETROTV-Token`.
+- el resto necesita la cabecera `X-RETROTV-Token`: `info`, `wifi`, `display`, `channels`, `voice` (`GET`, y `POST`
+  con `{"mic", "claps", "sensitivity", "standby": "voice"|"deep", "led"}`; sin voz responde `{"available": false}`)
+  y `reboot`.
 
 </details>
 
@@ -543,6 +551,7 @@ tareas. Abrir el puerto reinicia la placa. Además acepta estos comandos por el 
   (= mantener CH−). Hacen lo mismo que los mandos.
 - Con el firmware `voice`: `v` (niveles del micrófono), `V` (pausa la captura), `R` (grabar), `Y` (mensaje de
   prueba), `E` (borrar los mensajes) y `W` (encender desde STANDBY VOZ). Detalle en [docs/VOICE.md](docs/VOICE.md).
+- `F`: el apagado que provoca una batería agotada (para probar el despertar cada 5 min de la versión sin botones).
 - `d`: *dithering* sí/no, para compararlo (sale en pantalla "DITHER ON/OFF"). Por defecto, apagado.
 - `w`: enseña el aviso de batería, para verlo sin gastarla.
 - `m`: foto de la memoria (heap, mínimo, bloque más grande, PSRAM).
@@ -627,7 +636,7 @@ SDKROOT=$(xcrun --show-sdk-path) CXX=g++-16 tools/run_host_tests.sh   # GCC de H
 SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 ```
 
-Son 658 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
+Son 684 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
 bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi, batería y voz: niveles, palmadas, standby por
 voz y grabadora), compiladas con clang, ASan y UBSan, más los autotests de `make_index.py` y `make_dist.py`. No hace falta la placa.
@@ -660,7 +669,7 @@ ZIP por nombres y rutas (vídeo, audio, índices, carcasas, temporales) y compru
 <summary><b>Estructura del código</b></summary>
 
 ```
-platformio.ini          entornos "pautv" (el normal) y "voice" (+ micrófono): espressif32@6.9.0, gnu++17, -Wall -Wextra en src/
+platformio.ini          entornos "pautv" (el normal), "voice" (+ micrófono) y "voice_nokeys" (carcasa sin botones): espressif32@6.9.0, gnu++17, -Wall -Wextra en src/
 include/config.h        ajustes de la app: tiempos, rotación, SPI, audio, vídeo, tareas y prioridades, PAUTV_DEBUG_STATS
 include/board_config.h  pines verificados (fuentes en docs/HARDWARE.md) y ejes del táctil
 include/app_types.h     estados, eventos de entrada, macro de log con prefijo
@@ -677,7 +686,7 @@ src/network/            WifiManager: máquina de estados sin bloqueos, reintento
 src/web/                mando web: servidor HTTP, página, API, ajustes y emparejamiento
 src/teletext/           Teletext: filas, títulos y orden de páginas (C++ puro)
 src/settings/           SettingsStore: volumen, último canal y brillo en NVS con escritura diferida
-src/power/              Battery: lectura, porcentaje y avisos
+src/power/              Battery: lectura, porcentaje y avisos; Standby: qué hace apagar, con teclas o sin ellas
 src/diagnostics/        Diagnostics: PSRAM, flash y heap en ejecución, escaneo I2C, batería y LED de estado
 src/voice/              RETROTV Voice (solo con -e voice): captura del micrófono, palmadas, standby por voz, grabadora y canal MENSAJES
 lib/es8311/             driver ES8311 de Espressif, copiado sin modificar del sketch 07.1 de Freenove

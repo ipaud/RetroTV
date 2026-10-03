@@ -92,8 +92,10 @@ class App {
   bool startLocalPlayer();
   bool recoverSd();
   void enterStandby(bool voiceAllowed = true);  // a flat battery passes false: always deep sleep
-  void powerDown();                             // the CRT goes off; screen, Wi-Fi, speaker, LED off
-  [[noreturn]] void deepSleep();                // AHORRO MAXIMO: only a key wakes the TV
+  void powerDown(bool keepWifi = false);        // the CRT goes off; screen, Wi-Fi (unless kept), speaker, LED off
+  [[noreturn]] void remoteStandby();            // button-less without claps: Wi-Fi on, the web remote switches it on
+  [[noreturn]] void deepSleep();                // AHORRO MAXIMO: only a key wakes the TV (button-less: also a timer)
+  [[noreturn]] void sleepUntilWoken();          // the sleep itself, pins already latched off
   void startLive();
   bool startIntro();
   void finishIntro();
@@ -151,7 +153,9 @@ class App {
   void applyVoiceSettings();
   void publishVoiceSettings();
   void onVoiceSettingsInput(InputEvent e);
-  bool voiceStandbyChosen() const;
+  bool voiceStandbyPossible() const;
+  void applyVoiceChange(const VoiceChange& change);  // AJUSTES > VOZ from the web remote
+  size_t voiceConfigJson(char* out, size_t cap);  // STANDBY VOZ can listen: voice build, microphone and claps on
   // Recorder (PAUTV_RECORDER_ENABLED): GRABADORA, 3-2-1, REC, MENSAJE GUARDADO.
   void startRecorder();
   void updateRecorder(uint32_t nowMs);

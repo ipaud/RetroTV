@@ -396,6 +396,11 @@ esp_err_t WebRemote::onConfig(httpd_req_t* req) {
   } else if (post && pathIs(req, "/api/config/channels")) {
     r.op = ConfigOp::ChannelSet;
     ok = parseChannelToggle(body, static_cast<size_t>(len), r.number, r.enabled);
+  } else if (!post && pathIs(req, "/api/config/voice")) {
+    r.op = ConfigOp::VoiceGet;
+  } else if (post && pathIs(req, "/api/config/voice")) {
+    r.op = ConfigOp::VoiceSet;
+    ok = parseVoice(body, static_cast<size_t>(len), r.voice);
   } else if (post && pathIs(req, "/api/config/reboot")) {
     r.op = ConfigOp::Reboot;
   } else {

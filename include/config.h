@@ -46,6 +46,16 @@ constexpr uint32_t BATTERY_READ_MS = 5000;         // the LiPo voltage, smoothed
 constexpr uint32_t BATTERY_WARNING_MS = 5000;      // "BATERIA 14%": big, centred, blinking
 constexpr uint32_t BATTERY_EMPTY_NOTICE_MS = 5000; // "BATERIA AGOTADA" the same way, then standby
 constexpr uint32_t BATTERY_CHARGE_NOTICE_MS = 3000; // "CARGANDO" when the cable goes in
+// The case's front keys. 1: tele90 v9, or v10 with keys. 0: the button-less tele90 v10, run from the
+// web remote and claps: nothing may then leave the TV where only a key wakes it (src/power/Standby.h).
+#ifndef PAUTV_HAS_KEYS
+#define PAUTV_HAS_KEYS 1
+#endif
+constexpr uint32_t FLAT_CHECK_S = 300;          // button-less, flat battery: wake every 5 min to see if it charges...
+constexpr uint32_t FLAT_RESUME_MV = 3700;       // ...and switch on from this reading (USB in reads ~4.1 V)
+constexpr uint32_t NO_OFF_NOTICE_MS = 3000;     // button-less: "NO SE APAGA" when off could never be undone
+constexpr uint32_t REMOTE_STANDBY_POLL_MS = 50; // remote standby: how often the web remote's orders are read
+constexpr uint32_t REMOTE_STANDBY_CPU_MHZ = 80; // the lowest speed the Wi-Fi works at
 // Capacitive touch (FNK0104B only): tap / swipe / hold, in screen pixels.
 constexpr int TOUCH_TAP_MAX_PX = 15;
 constexpr int TOUCH_SWIPE_MIN_PX = 40;

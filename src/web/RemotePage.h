@@ -295,6 +295,16 @@ text-shadow:0 -1px 0 #0009,0 1px 0 #ffffff24}
 <label class="fld">Brillo <output id="bo"></output><input type="range" id="bri" min="10" max="100" step="10"></label>
 <label class="fld">Volumen <output id="vo"></output><input type="range" id="vlm" min="0" max="100" step="5"></label>
 <p class="msg" id="dmsg" role="status"></p></div>
+<div class="sec" id="vsec" hidden><h3>VOZ</h3>
+<p>Palmadas y apagado por voz. La grabadora solo se usa desde la tele: el mando no puede grabar.</p>
+<ul class="list">
+<li><label class="chl"><input type="checkbox" class="sw" id="vmic"><span>Micr&oacute;fono</span></label></li>
+<li><label class="chl"><input type="checkbox" class="sw" id="vclap"><span>Palmadas</span></label></li>
+<li><label class="chl"><input type="checkbox" class="sw" id="vsb"><span>Al apagar, seguir escuchando palmadas (STANDBY VOZ)</span></label></li>
+<li><label class="chl"><input type="checkbox" class="sw" id="vled"><span>Piloto al o&iacute;r una palmada</span></label></li>
+</ul>
+<label class="fld">Sensibilidad <output id="vso"></output><input type="range" id="vsen" min="0" max="100" step="10"></label>
+<p class="msg" id="vmsg" role="status"></p></div>
 <div class="sec"><h3>CANALES</h3><ul class="list" id="chs"></ul><p class="msg" id="cmsg" role="status"></p></div>
 <div class="sec"><h3>INFORMACI&Oacute;N</h3><dl id="info"></dl>
 <button class="btn warn" id="reboot">REINICIAR LA TELE</button><p class="msg" id="rmsg" role="status"></p></div>
@@ -310,7 +320,7 @@ function nextSkin(d){const k=Object.keys(SKINS),s=k[(k.indexOf(root.dataset.skin
 skin(s);try{localStorage.setItem('retrotv-skin',s)}catch(e){}b.textContent=SKINS[s];clearTimeout(b.t);b.t=setTimeout(()=>b.textContent='MANDO',1500);
 r.classList.remove('in-l','in-r');void r.offsetWidth;r.classList.add(d>0?'in-r':'in-l')}
 skin(root.dataset.skin||'');
-const SCREENS={starting:'ARRANCANDO',switching:'CAMBIANDO',menu:'MENÚ',error:'ERROR'};
+const SCREENS={starting:'ARRANCANDO',switching:'CAMBIANDO',menu:'MENÚ',error:'ERROR',standby:'APAGADA'};
 function blink(){const l=$('led');l.classList.add('on');setTimeout(()=>l.classList.remove('on'),160)}
 async function get(p){const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw r.status;return r.json()}
 async function send(p){blink();if(navigator.vibrate)navigator.vibrate(8);
@@ -368,8 +378,8 @@ catch(e){msg('pmsg',e.message,1)}};
 $('enter').onclick=async()=>{try{const d=await cfg('pair',{code:$('code').value.trim()});setTok(d.token);$('code').value='';
 msg('pmsg','');loadAll()}catch(e){msg('pmsg',e.message,1)}};
 async function loadAll(){$('pair').hidden=true;$('main').hidden=false;
-try{const [i,w,d,c]=await Promise.all([cfg('info'),cfg('wifi'),cfg('display'),cfg('channels')]);
-renderInfo(i);renderNets(w.networks);renderDisplay(d);renderChs(c.channels)}catch(e){if(tok)msg('wmsg',e.message,1)}}
+try{const [i,w,d,c,v]=await Promise.all([cfg('info'),cfg('wifi'),cfg('display'),cfg('channels'),cfg('voice')]);
+renderInfo(i);renderNets(w.networks);renderDisplay(d);renderChs(c.channels);renderVoice(v)}catch(e){if(tok)msg('wmsg',e.message,1)}}
 function renderNets(list){const u=$('nets');u.textContent='';if(!list.length)u.append(el('li','Ninguna red guardada'));
 for(const n of list){const l=el('li');l.append(el('span',n.ssid),el('small',n.connected?'CONECTADA':(n.removable?'SD':'FIRMWARE'),'tag'+(n.connected?' on':'')));
 if(n.removable){const b=el('button','BORRAR','mini');b.setAttribute('aria-label','Borrar la red '+n.ssid);
@@ -393,6 +403,15 @@ function renderDisplay(d){$('bri').value=d.brightness;$('vlm').value=d.volume;$(
 for(const [id,key,out,suf] of [['bri','brightness','bo',' %'],['vlm','volume','vo','']]){
 $(id).oninput=()=>{$(out).textContent=$(id).value+suf};
 $(id).onchange=async()=>{try{renderDisplay(await cfg('display',{[key]:+$(id).value}));msg('dmsg','Guardado')}catch(e){msg('dmsg',e.message,1)}}}
+function renderVoice(v){$('vsec').hidden=!v.available;if(!v.available)return;
+$('vmic').checked=v.mic;$('vclap').checked=v.claps;$('vled').checked=v.led;$('vsb').checked=v.standby==='voice';
+$('vsb').disabled=v.standby_fixed;$('vsen').value=v.sensitivity;$('vso').textContent=v.sensitivity;
+if(v.standby_fixed)msg('vmsg','Sin teclas: al apagar siempre escucha palmadas; sin palmadas, el mando la vuelve a encender')}
+async function setVoice(b){try{renderVoice(await cfg('voice',b));msg('vmsg','Guardado')}
+catch(e){msg('vmsg',e.message,1);try{renderVoice(await cfg('voice'))}catch(_){}}}
+for(const [id,key] of [['vmic','mic'],['vclap','claps'],['vled','led']])$(id).onchange=()=>setVoice({[key]:$(id).checked});
+$('vsb').onchange=()=>setVoice({standby:$('vsb').checked?'voice':'deep'});
+$('vsen').oninput=()=>{$('vso').textContent=$('vsen').value};$('vsen').onchange=()=>setVoice({sensitivity:+$('vsen').value});
 function renderChs(list){const u=$('chs');u.textContent='';for(const c of list){const l=el('li'),lab=el('label','','chl'),sw=el('input');
 sw.type='checkbox';sw.className='sw';sw.checked=c.enabled;lab.append(sw,el('span',String(c.n).padStart(2,'0')+'  '+c.name));
 sw.onchange=async()=>{sw.disabled=true;try{await cfg('channels',{n:c.n,enabled:sw.checked});

@@ -3,6 +3,7 @@
 
 #include "check.h"
 #include "power/Battery.h"
+#include "power/Standby.h"
 
 static void testPercent() {
   CHECK(batteryPercent(4250) == 100 && batteryPercent(4200) == 100);
@@ -86,9 +87,30 @@ static void testCharging() {
   CHECK(!rising.charging());
 }
 
+static void testStandbyMode() {
+  // With keys: as before. APAGADO picks; STANDBY VOZ only if it can listen; a flat battery sleeps deep.
+  CHECK(standbyMode(true, true, true, false, true) == StandbyMode::Deep);
+  CHECK(standbyMode(true, true, true, true, true) == StandbyMode::Voice);
+  CHECK(standbyMode(true, true, false, true, true) == StandbyMode::Deep);
+  CHECK(standbyMode(true, false, true, true, true) == StandbyMode::Deep);
+  // Button-less: never a deep sleep the user asked for. STANDBY VOZ whatever APAGADO says; without
+  // claps, the remote standby while the web remote can reach it; with neither, stay on.
+  CHECK(standbyMode(false, true, true, false, false) == StandbyMode::Voice);
+  CHECK(standbyMode(false, true, true, false, true) == StandbyMode::Voice);
+  CHECK(standbyMode(false, true, false, false, true) == StandbyMode::Remote);
+  CHECK(standbyMode(false, true, false, true, true) == StandbyMode::Remote);
+  CHECK(standbyMode(false, true, false, false, false) == StandbyMode::StayOn);
+  CHECK(standbyMode(false, false, true, true, true) == StandbyMode::Deep);  // flat: sleeps, waking itself to check
+  // The timer check: a resting flat cell sleeps on, a charging one switches on.
+  CHECK(!flatCheckSwitchOn(3550, 3700));
+  CHECK(flatCheckSwitchOn(3700, 3700));
+  CHECK(flatCheckSwitchOn(4120, 3700));
+}
+
 void runBatteryTests() {
   testPercent();
   testWarnings();
   testEmpty();
   testCharging();
+  testStandbyMode();
 }

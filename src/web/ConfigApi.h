@@ -44,6 +44,28 @@ bool parseDisplay(const char* body, size_t len, int& brightness, int& volume);  
 bool parseChannelToggle(const char* body, size_t len, uint16_t& number, bool& enabled);
 bool parseCode(const char* body, size_t len, char* code, size_t cap);
 
+// AJUSTES > VOZ from the phone (voice builds). A change carries only what the phone sent: -1 = not
+// given. "standby" is "voice" (STANDBY VOZ) or "deep" (AHORRO MAX). No recorder here, on purpose:
+// the remote has no PIN, and anyone on the Wi-Fi could record the room.
+struct VoiceChange {
+  int8_t mic = -1;
+  int8_t claps = -1;
+  int sensitivity = -1;  // 0-100
+  int8_t standbyVoice = -1;
+  int8_t led = -1;
+};
+bool parseVoice(const char* body, size_t len, VoiceChange& change);  // false if empty or invalid
+struct VoiceConfig {
+  bool available = false;     // a voice build with a working microphone
+  bool mic = false;
+  bool claps = false;
+  uint8_t sensitivity = 0;
+  bool standbyVoice = false;  // APAGADO = STANDBY VOZ
+  bool standbyFixed = false;  // button-less: always STANDBY VOZ, the phone cannot change it
+  bool led = false;
+};
+size_t writeVoiceJson(const VoiceConfig& config, char* out, size_t cap);
+
 // wifi.json: always written in the {"networks": [...]} format; the same SSID replaces its
 // password; at most WIFI_MAX_NETWORKS.
 bool wifiJsonAdd(JsonDocument& doc, const char* ssid, const char* password, char* error, size_t errorCap);

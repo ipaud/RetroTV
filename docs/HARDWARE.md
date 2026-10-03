@@ -108,8 +108,22 @@ se distribuye como imprimible hasta publicar sus STL revisados.
 - **Dentro:** la placa tras la ventana, el altavoz de 40×28 mm bajo la rejilla del techo y la LiPo **detrás de la placa**,
   en el cuerpo.
 - **Por fuera:** 4 teclas con su símbolo grabado, LED de 3 mm (piloto) y USB-C directo por el lateral derecho.
+- **tele90 v10:** la v9 en dos piezas (frontal y un cuerpo con la trasera cerrada, 8 imanes), mismas medidas.
+  Tiene una **variante sin botones**: frontal liso con solo el LED, que se maneja con el mando web y las palmadas.
+  Esa variante necesita el firmware `voice_nokeys` (ver abajo). Archivos fuera del repo, como los de la v9.
 - **Versiones anteriores** (v5 y las de 97 y 112 mm de fondo): superadas. Sus cotas, la ventana de pantalla, la posición
   de la batería y el alargador de microSD **no valen para la v9**.
+
+**Sin botones (`PAUTV_HAS_KEYS 0`, entorno `voice_nokeys`).** En reposo profundo solo despierta una tecla o BOOT, y
+en esa carcasa no hay teclas y BOOT queda dentro. Para que nunca se quede apagada sin salida:
+- ⏻ del mando web (y dos palmadas) apagan a **STANDBY VOZ**, diga lo que diga APAGADO; dos palmadas la encienden.
+- Si STANDBY VOZ no puede escuchar (micrófono o palmadas desactivados, o un firmware sin voz), ⏻ apaga a
+  **STANDBY WI-FI**: pantalla, sonido y LED apagados, pero la Wi-Fi y el mando web siguen. ⏻ (o cualquier tecla del
+  mando) la vuelve a encender; el mando dice APAGADA mientras tanto. Consumo sin medir.
+- Solo si tampoco hay Wi-Fi la tele **no se apaga** y lo dice en pantalla ("NO SE APAGA / SIN WI-FI NI PALMADAS").
+- Con la batería agotada duerme igual, pero **se despierta sola cada 5 min** (`FLAT_CHECK_S`), mira la batería y, si
+  lee 3,7 V o más (`FLAT_RESUME_MV`; con el USB-C enchufado lee ~4,1 V), arranca. Si no, vuelve a dormir sin
+  encender nada. Es decir: al cargarla, se enciende sola en unos minutos.
 
 Cableado (el mismo en cualquier carcasa):
 

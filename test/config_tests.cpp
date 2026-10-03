@@ -136,6 +136,27 @@ static void testChannelsJsonToggle() {
   CHECK(writeChannelsFile(doc, tiny, sizeof(tiny)) == 0);
 }
 
+static void testVoiceBodies() {
+  VoiceChange v;
+  const char* all = R"({"mic": true, "claps": false, "sensitivity": 70, "standby": "voice", "led": false})";
+  CHECK(parseVoice(all, strlen(all), v) && v.mic == 1 && v.claps == 0 && v.sensitivity == 70 && v.standbyVoice == 1 &&
+        v.led == 0);
+  const char* one = R"({"standby": "deep"})";  // only what was sent changes
+  CHECK(parseVoice(one, strlen(one), v) && v.standbyVoice == 0 && v.mic == -1 && v.claps == -1 && v.sensitivity == -1 &&
+        v.led == -1);
+  for (const char* bad : {R"({})", R"({"mic": 1})", R"({"sensitivity": 101})", R"({"sensitivity": -1})",
+                          R"({"sensitivity": "60"})", R"({"standby": "off"})", R"({"standby": true})", "not json"}) {
+    CHECK(!parseVoice(bad, strlen(bad), v));
+  }
+  char out[160];
+  VoiceConfig c;
+  CHECK(writeVoiceJson(c, out, sizeof(out)) > 0 && strcmp(out, R"({"available":false})") == 0);
+  c = VoiceConfig{true, true, true, 60, false, true, true};
+  CHECK(writeVoiceJson(c, out, sizeof(out)) > 0 &&
+        strcmp(out, R"({"available":true,"mic":true,"claps":true,"sensitivity":60,"standby":"deep","standby_fixed":true,"led":true})") == 0);
+  CHECK(writeVoiceJson(c, out, 20) == 0);  // never a cut-off JSON
+}
+
 void runConfigTests() {
   testPairing();
   testPairingLimits();
@@ -143,4 +164,5 @@ void runConfigTests() {
   testWifiJsonEdits();
   testWifiListNeverShowsPasswords();
   testChannelsJsonToggle();
+  testVoiceBodies();
 }

@@ -118,6 +118,10 @@ void App::runSerialCommand(char command, const char* argument, uint32_t nowMs) {
     case 'E':  // delete every saved message
       deleteMessages();
       return;
+    case 'F':  // the standby a flat battery gets (button-less: it wakes itself every FLAT_CHECK_S)
+      PLOG("POWER", "serial F: flat-battery standby");
+      enterStandby(false);
+      return;
     case 'w':
       showBatteryWarning();
       return;
