@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/ESP32--S3-Freenove%202.8%22-E7352C?logo=espressif&logoColor=white" alt="Placa: Freenove ESP32-S3 Display 2.8 pulgadas">
   <img src="https://img.shields.io/badge/PlatformIO-espressif32%406.9.0-F5822A?logo=platformio&logoColor=white" alt="PlatformIO: espressif32 6.9.0">
   <img src="https://img.shields.io/badge/Arduino%20core-2.0.17-00979D?logo=arduino&logoColor=white" alt="Arduino core 2.0.17">
+  <a href="https://github.com/ipaud/RetroTV/actions/workflows/ci.yml"><img src="https://github.com/ipaud/RetroTV/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI: estado de los tests y las compilaciones en main"></a>
 </p>
 
 RETROTV es el firmware de una tele en miniatura hecha con una placa ESP32-S3 con pantalla de 2,8″. Cada canal es una
