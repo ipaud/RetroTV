@@ -1,11 +1,14 @@
-# Checks every pull request and every push to main without a board: host tests, server tests and the builds.
+# Checks every pull request and every push to the default branch, without a board: host tests, server tests and builds.
 # Nothing here flashes a board. What each job checks and what stays manual: docs/DEVELOPMENT.md.
 name: CI
 
+# Pull requests, and pushes to the repository's default branch (main here, whatever it is called in a fork). The
+# push trigger cannot name "the default branch", so it takes every branch and each job skips the others: a feature
+# branch is checked by its pull request, not twice. Branch filter only: tags do not run it.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ['**']
 
 permissions:
   contents: read
@@ -20,8 +23,7 @@ env:
 
 jobs:
   host-tests:
-    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
-    if: github.repository == 'ipaud/RetroTV'
+    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
     name: Host tests (C++ with clang + sanitizers, tool self-tests)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -43,8 +45,7 @@ jobs:
           CXX=clang++ tools/run_host_tests.sh
 
   server-tests:
-    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
-    if: github.repository == 'ipaud/RetroTV'
+    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
     name: Server tests (pytest, real FFmpeg)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -66,8 +67,7 @@ jobs:
         run: python -m pytest -rs
 
   firmware:
-    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
-    if: github.repository == 'ipaud/RetroTV'
+    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
     name: Firmware (${{ matrix.env }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -99,8 +99,7 @@ jobs:
         run: cmp standby/partitions.csv ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/default_16MB.csv
 
   standby:
-    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
-    if: github.repository == 'ipaud/RetroTV'
+    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
     name: Standby app (ESP-IDF 5.4.1, without the «Hey Retro» model)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
