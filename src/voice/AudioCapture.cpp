@@ -47,6 +47,8 @@ AudioCapture::Snapshot AudioCapture::snapshot() const {
   s.sustained = sustained_.load();
   s.suppressed = suppressed_.load();
   s.fromTv = fromTv_.load();
+  s.tvPeakDb10 = tvPeakDb10_.load();
+  s.tvFloorDb10 = tvFloorDb10_.load();
   return s;
 }
 
@@ -76,6 +78,8 @@ void AudioCapture::detectClaps(const int16_t* mono, size_t frames, uint32_t nowM
     appliedSensitivity_ = s;
   }
   clap_.setExtraMarginDb10(playbackLoud_.load() ? CLAP_PLAYBACK_EXTRA_DB10 : 0);
+  // Only an audible speaker can fake a clap: muted (or volume 0) the programme's bangs are not heard.
+  clap_.setPlayback(playbackLoud_.load() ? &audio_->playback() : nullptr);
   clap_.setMinDb10(clapMinDb10_.load());
   const uint32_t fx = audio_->fxUntilMs();
   if (fx != lastFxMs_) {  // static or a beep from the TV itself: not a clap
@@ -102,6 +106,8 @@ void AudioCapture::detectClaps(const int16_t* mono, size_t frames, uint32_t nowM
   sustained_.store(st.sustained);
   suppressed_.store(st.suppressed);
   fromTv_.store(st.fromTv);
+  tvPeakDb10_.store(clap_.tvPeakDb10());
+  tvFloorDb10_.store(clap_.tvFloorDb10());
 #else
   (void)mono;
   (void)frames;

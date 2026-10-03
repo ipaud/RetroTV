@@ -41,6 +41,8 @@ class AudioCapture {
     uint32_t sustained = 0;
     uint32_t suppressed = 0;
     uint32_t fromTv = 0;
+    int16_t tvPeakDb10 = MIC_FLOOR_DB10;   // the last one dropped as the programme: its peak...
+    int16_t tvFloorDb10 = MIC_FLOOR_DB10;  // ...and the floor then
   };
 
   // Loop task, after AudioManager::begin(). False (and no task) without a working microphone.
@@ -61,7 +63,8 @@ class AudioCapture {
   // How long it was quiet before the sequence takeSequence() just returned, and every bang heard so far.
   uint32_t sequenceQuietBeforeMs() const { return seqQuietMs_.load(); }
   uint32_t bangs() const { return bangs_.load(); }
-  uint32_t dull() const { return dull_.load(); }  // transients dropped as too dull (snapshot().clapHfPct: how bright)
+  uint32_t dull() const { return dull_.load(); }
+  uint32_t fromTv() const { return fromTv_.load(); }  // transients dropped as the programme's own sound  // transients dropped as too dull (snapshot().clapHfPct: how bright)
   // Loop task: the place in its sequence (1, 2...) of the newest clap, as it happened, or 0.
   uint8_t takeClapIndex() { return clapIndex_.exchange(0); }
 
@@ -124,4 +127,6 @@ class AudioCapture {
   std::atomic<uint32_t> sustained_{0};
   std::atomic<uint32_t> suppressed_{0};
   std::atomic<uint32_t> fromTv_{0};
+  std::atomic<int16_t> tvPeakDb10_{MIC_FLOOR_DB10};
+  std::atomic<int16_t> tvFloorDb10_{MIC_FLOOR_DB10};
 };

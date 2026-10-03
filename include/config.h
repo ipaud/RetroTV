@@ -170,7 +170,7 @@ constexpr uint32_t MIC_TEST_LOG_MS = 250;
 // Clap detector (voice/ClapDetector.h). Starting values, to calibrate with real claps.
 constexpr uint32_t CLAP_WINDOW_MS = 5;            // energy windows
 constexpr float CLAP_FLOOR_ALPHA = 1.0f / 300;    // noise floor EMA per window: ~1.5 s
-constexpr uint8_t CLAP_SENSITIVITY_DEFAULT = 60;  // 0..100
+constexpr uint8_t CLAP_SENSITIVITY_DEFAULT = 80;  // 60 missed claps in the case with the programme raising the floor (2026-10-03)
 constexpr uint8_t CLAP_SENSITIVITY_STEP = 10;     // AJUSTES > VOZ > SENSIBLE
 constexpr int16_t CLAP_MARGIN_MAX_DB10 = 300;     // over the floor at sensitivity 0
 constexpr int16_t CLAP_MARGIN_MIN_DB10 = 100;     // at 100 (60 -> 18 dB)
@@ -184,14 +184,16 @@ constexpr uint32_t CLAP_ECHO_MS = 180;            // after a clap, its echo is i
 constexpr uint32_t CLAP_GAP_MAX_MS = 700;         // claps further apart are separate sequences
 // What makes a sequence of claps real (a knock, an alarm or a rattle is not), checked when it closes:
 constexpr uint32_t CLAP_RHYTHM_MAX_MS = 600;      // two hands: 0.18-0.6 s between claps (real: 0.21-0.5 s)
-constexpr int16_t CLAP_PEAK_SPREAD_DB10 = 90;     // the claps of one sequence within 9 dB of each other
+constexpr int16_t CLAP_PEAK_SPREAD_DB10 = 120;    // the claps of one sequence within 12 dB (real triples: up to 10.1)
 constexpr uint8_t CLAP_SEQUENCE_MAX = 3;          // 4 or more (an alarm beeping, something rattling): nothing
 constexpr float CLAP_HF_HZ = 2000.0f;             // a clap is bright: much of its energy above 2 kHz...
-constexpr float CLAP_HF_MIN_SHARE = 0.18f;        // ...a knock or a door is mostly below it (the user's claps: 21-35 %)
+constexpr float CLAP_HF_MIN_SHARE = 0.10f;        // ...a knock is mostly below it. Claps: 21-35 % with the board bare,
+                                                  // 11-17 % inside the case (2026-10-03): the plastic dulls them
 constexpr int16_t CLAP_STANDBY_MIN_DB10 = -360;   // in STANDBY VOZ only a clap near the TV counts (-36 dBFS)
-// STANDBY VOZ wakes on two claps with quiet around them: a pair of household bangs passed every check
-// above and switched the TV on (2026-10-02), but it came in a cluster of bangs; a person claps after
-// a moment of quiet. (Three claps would be safer; the user did not want them.)
+// Claps switch the TV off (while it plays) and on (STANDBY VOZ): three, with quiet around them in
+// standby. Two let household pairs through, even with every check above (user, 2026-10-03); three
+// claps in a hand rhythm and of even loudness rarely happen by chance. 4 or more are nothing.
+constexpr uint8_t CLAP_POWER_CLAPS = 3;
 constexpr uint32_t STANDBY_QUIET_BEFORE_MS = 2500;  // no bang in the 2.5 s before the first clap
 constexpr uint32_t STANDBY_QUIET_AFTER_MS = 500;    // nor in the 0.5 s after the sequence closed (1.2 s in all)
 constexpr int16_t CLAP_PLAYBACK_EXTRA_DB10 = 60;  // threshold up while the TV plays sound
@@ -201,6 +203,12 @@ constexpr uint32_t CLAP_TV_LOOKBACK_MS = 80;
 constexpr uint32_t CLAP_TV_LOOKAHEAD_MS = 30;
 constexpr int16_t CLAP_TV_RISE_DB10 = 80;   // the programme jumped 8 dB...
 constexpr int16_t CLAP_TV_MIN_DB10 = -350;  // ...to at least -35 dBFS (digital, before the volume)
+// ...unless it is loud and stands far over the floor. In a dense programme a rise falls in that window
+// for about every other clap. Measured in the case (2026-10-03): the user's claps -10 to -25 dBFS,
+// 30.5-45 dB over the floor, half of them dropped; the programme's own bangs 24-32 dB over the floor
+// but at -38 to -44 dBFS (earlier punches at 75 % volume: -14 to -24 dBFS, at most 26 dB over).
+constexpr int16_t CLAP_TV_OVER_FLOOR_DB10 = 280;
+constexpr int16_t CLAP_TV_OVER_MIN_DB10 = -300;
 constexpr float CLAP_TV_HIGHPASS_HZ = 400.0f;  // measured above this: the small speaker plays no bass
 constexpr uint32_t CLAP_SELF_SOUND_TAIL_MS = 350; // after its own static, beep, mute or volume change (the
                                                   // speaker pops when the DAC mutes), claps are not taken

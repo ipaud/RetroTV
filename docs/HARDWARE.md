@@ -116,7 +116,7 @@ se distribuye como imprimible hasta publicar sus STL revisados.
 
 **Sin botones (`PAUTV_HAS_KEYS 0`, entorno `voice_nokeys`).** En reposo profundo solo despierta una tecla o BOOT, y
 en esa carcasa no hay teclas y BOOT queda dentro. Para que nunca se quede apagada sin salida:
-- ⏻ del mando web (y dos palmadas) apagan a **STANDBY VOZ**, diga lo que diga APAGADO; dos palmadas la encienden.
+- ⏻ del mando web (y tres palmadas) apagan a **STANDBY VOZ**, diga lo que diga APAGADO; tres palmadas la encienden.
 - Si STANDBY VOZ no puede escuchar (micrófono o palmadas desactivados, o un firmware sin voz), ⏻ apaga a
   **STANDBY WI-FI**: pantalla, sonido y LED apagados, pero la Wi-Fi y el mando web siguen. ⏻ (o cualquier tecla del
   mando) la vuelve a encender; el mando dice APAGADA mientras tanto. Consumo sin medir.

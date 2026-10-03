@@ -98,6 +98,9 @@ class ClapDetector {
   uint32_t lastGapMs() const { return lastGapMs_; }
   // How much the programme's own sound rose around the last accepted clap (for tuning).
   int16_t lastTvRiseDb10() const { return lastTvRiseDb10_; }
+  // The last transient dropped as the programme's own sound: its peak and the floor then.
+  int16_t tvPeakDb10() const { return tvPeakDb10_; }
+  int16_t tvFloorDb10() const { return tvFloorDb10_; }
   // Share of the last transient's energy above CLAP_HF_HZ (claps ~0.5+, knocks less).
   float lastHfShare() const { return lastHfShare_; }
   // How long it was quiet before the last reported sequence's first clap (UINT32_MAX: nothing heard
@@ -189,8 +192,11 @@ class ClapDetector {
     }
     if (playback_ != nullptr) {
       lastTvRiseDb10_ = playback_->maxRise(riseMs_ - CLAP_TV_LOOKBACK_MS, riseMs_ + CLAP_TV_LOOKAHEAD_MS, CLAP_TV_MIN_DB10);
-      if (lastTvRiseDb10_ >= CLAP_TV_RISE_DB10) {
+      const bool handLoud = peakDb10_ >= CLAP_TV_OVER_MIN_DB10 && peakDb10_ - floorDb10() >= CLAP_TV_OVER_FLOOR_DB10;
+      if (lastTvRiseDb10_ >= CLAP_TV_RISE_DB10 && !handLoud) {
         ++stats_.fromTv;
+        tvPeakDb10_ = peakDb10_;  // for the log: how loud the dropped one was, over which floor
+        tvFloorDb10_ = floorDb10();
         return;
       }
     }
@@ -273,5 +279,7 @@ class ClapDetector {
   int16_t lastPeakDb10_ = MIC_FLOOR_DB10;
   uint32_t lastGapMs_ = 0;
   int16_t lastTvRiseDb10_ = 0;
+  int16_t tvPeakDb10_ = MIC_FLOOR_DB10;
+  int16_t tvFloorDb10_ = MIC_FLOOR_DB10;
   Stats stats_;
 };

@@ -4,7 +4,7 @@
 //
 // With front keys, off is the deep sleep (AHORRO MAX, a key wakes it) or STANDBY VOZ if chosen in
 // AJUSTES > VOZ > APAGADO. Without keys (the button-less tele90 v10, PAUTV_HAS_KEYS 0) nothing could
-// wake a deep sleep, BOOT being inside the case: off is STANDBY VOZ (two claps switch it on); if that
+// wake a deep sleep, BOOT being inside the case: off is STANDBY VOZ (three claps switch it on); if that
 // cannot listen (no voice build, microphone or claps off), the remote standby (Wi-Fi left on: the web
 // remote switches it on); with neither, the TV stays on. A flat battery always ends in a deep sleep;
 // without keys that sleep wakes itself now and then to see whether the cell is charging.

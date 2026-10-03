@@ -2,8 +2,8 @@
 
 // What claps mean while the TV is in voice standby (pure C++, host-tested in test/voice_tests.cpp).
 // docs/VOICE.md: every clap heard flashes the front LED ("I heard you"). The TV wakes on a sequence
-// of exactly two claps that passed the detector's checks (hand rhythm, even loudness, a clap's
-// brightness) with quiet around it: no bang in the STANDBY_QUIET_BEFORE_MS before the first clap,
+// of exactly CLAP_POWER_CLAPS (3) claps that passed the detector's checks (hand rhythm, even loudness, a
+// clap's brightness) with quiet around it: no bang in the STANDBY_QUIET_BEFORE_MS before the first clap,
 // and none in the STANDBY_QUIET_AFTER_MS after the sequence closed. Household noises come in
 // clusters (a pair of bangs once passed every other check); a person claps after a moment of quiet.
 // A wake that cannot happen (the battery is flat) is cancelled and the TV keeps listening.
@@ -21,9 +21,9 @@ class VoiceStandby {
     return index >= 1 && !waking_ ? StandbyAction::Blink : StandbyAction::None;
   }
   // A sequence closed and passed the checks at nowMs; bangs = the detector's count of every bang so
-  // far. Two claps after enough quiet start the wait for quiet after.
+  // far. CLAP_POWER_CLAPS claps after enough quiet start the wait for quiet after.
   void onSequence(uint8_t claps, uint32_t quietBeforeMs, uint32_t bangs, uint32_t nowMs) {
-    pending_ = !waking_ && claps == 2 && quietBeforeMs >= STANDBY_QUIET_BEFORE_MS;
+    pending_ = !waking_ && claps == CLAP_POWER_CLAPS && quietBeforeMs >= STANDBY_QUIET_BEFORE_MS;
     pendingBangs_ = bangs;
     pendingSinceMs_ = nowMs;
   }

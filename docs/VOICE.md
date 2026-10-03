@@ -24,13 +24,13 @@ usuario, con su sala y su voz; el detalle de cada prueba está en [TEST_PLAN.md]
 | Medidor VU (pantalla MICROFONO) | **implementado, probado** | el usuario vio la barra moverse con voz y palmadas |
 | MIC TEST por serie (`v`) | implementado, probado | niveles cada 250 ms durante 10 s |
 | Detector de palmadas | **implementado, probado** | 43 secuencias reales en el log; ver calibración |
-| Doble palmada → apagar a STANDBY VOZ | **implementado, probado** | antes silenciaba; el usuario prefiere encender y apagar con dos |
-| Triple palmada → canal siguiente | **implementado, probado** | |
+| Doble palmada | **no hace nada** (con el firmware `voice`) | apagaba (probado 2026-10-02); se colaban demasiados pares de ruidos |
+| Triple palmada → apagar a STANDBY VOZ | implementado, **pendiente de probar** | antes cambiaba de canal (probado); el usuario pasó de dos a tres palmadas para encender y apagar (2026-10-03) |
 | Ajustes AJUSTES → VOZ | **implementado, probado** | MICROFONO, PALMADAS, SENSIBLE, APAGADO, LED ESCUCHA y GRABAR MENSAJE, en NVS; recorridos por serie (sin teclas montadas) |
 | Descartar el sonido de la propia tele | **implementado, probado** | envolvente del programa por encima de 400 Hz |
 | Falsos positivos con la tele sonando | **probado con una escena, sin validar en general** | 30 min con un capítulo concreto al 75 %: 0 dobles (2026-10-03). No se ha probado con otros programas, volúmenes ni salas |
 | STANDBY VOZ: cada palmada = destello del piloto | **implementado, probado** (v0.2) | |
-| STANDBY VOZ: dos palmadas con silencio alrededor = encender | **implementado, probado** | la primera versión se encendía con ruidos de casa; no es infalible (ver más abajo) |
+| STANDBY VOZ: tres palmadas con silencio alrededor = encender | implementado; con dos, probado; con tres, **pendiente** | la primera versión se encendía con ruidos de casa; no es infalible (ver más abajo) |
 | Selector APAGADO: STANDBY VOZ / AHORRO MAX | **implementado, probado** (v0.2) | por defecto AHORRO MAX; las dos ramas probadas en la placa (TV9, TV13) |
 | Consumo de STANDBY VOZ | **estimado ~40 mA** (30–50) | una noche: 72 → 64 % en ~6 h; ~3 días desde llena. Falta un medidor |
 | Falsos encendidos en standby | **sin medir con log** | una sesión corta: 5 golpes sueltos sin encender; una noche (~6 h) en STANDBY VOZ sin encenderse, deducido de la batería (sin log) |
@@ -84,13 +84,13 @@ tarea "mic" (núcleo 1, prioridad 4) ── duerme en i2s_read, bloques de 512 m
         └── ClapDetector ─ secuencia terminada (1, 2, 3) ─► App::pollClaps()
                                                               │ solo con un programa en marcha
                                                               ▼
-                                       doble: apagar a STANDBY VOZ / triple: InputEvent::ChNext (= botones)
+                                       triple: apagar a STANDBY VOZ / doble: nada
 ```
 
-- **Mismos caminos que las teclas.** Doble = `powerDown()` + `voiceStandby()`, el apagado de ⏻ pero siempre a
-  STANDBY VOZ (lo que apagan dos palmadas lo encienden dos palmadas, diga lo que diga APAGADO); triple =
-  `InputEvent::ChNext`, tratado por `App::onInput()` igual que una tecla o el mando web. Sin
-  `PAUTV_CLAP_WAKE_ENABLED`, la doble silencia (`InputEvent::Mute`), como antes.
+- **Mismos caminos que las teclas.** Triple (`CLAP_POWER_CLAPS`) = `powerDown()` + `voiceStandby()`, el apagado de
+  ⏻ pero siempre a STANDBY VOZ (lo que apagan tres palmadas lo encienden tres palmadas, diga lo que diga APAGADO).
+  La doble no hace nada. Sin `PAUTV_CLAP_WAKE_ENABLED` vale lo de antes: doble = silencio (`InputEvent::Mute`),
+  triple = canal siguiente (`InputEvent::ChNext`).
 - **Archivos:** `src/voice/AudioCapture.*` (solo obtiene PCM y mide), `src/voice/MicMeter.h` y
   `src/voice/ClapDetector.h` (C++ puro, con tests), `src/app/AppVoice.cpp` (pantalla, ajustes, palmadas → eventos).
   Fuera de la versión con voz, `AppVoice.cpp` son funciones vacías.
@@ -137,25 +137,29 @@ Con eso, una sala tranquila lee **−58 a −67 dBFS** y una palmada a 0,5–1 m
 1. quita la continua y mide la energía en ventanas de 5 ms;
 2. sigue el **ruido de fondo** con una media lenta en dB (~1,5 s) en todas las ventanas menos las de una posible
    palmada, así que un ruido constante (la propia tele, una conversación larga) sube el umbral solo;
-3. **umbral** = fondo + margen (SENSIBLE 60 → 18 dB; 100 → 10 dB; 0 → 30 dB), nunca por debajo de −46 dBFS,
+3. **umbral** = fondo + margen (SENSIBLE 80, el valor por defecto → 14 dB; 60 → 18 dB; 100 → 10 dB; 0 → 30 dB; era 60,
+   pero dentro de la carcasa y con el programa subiendo el fondo se perdían palmadas), nunca por debajo de −46 dBFS,
    y +6 dB mientras la tele suena;
 4. una palmada es una **subida brusca** (≥ 9 dB en una o dos ventanas) que **cae** ≥ 10 dB en menos de 100 ms;
    un sonido fuerte que dura más se descarta (`long`);
-5. y es **brillante**: ≥ 18 % de su energía por encima de 2 kHz. Un golpe en la madera o una puerta es sordo y no
+5. y es **brillante**: ≥ 10 % de su energía por encima de 2 kHz. Un golpe en la madera o una puerta es sordo y no
    cuenta (`dull`; cada uno deja `[CLAP] too dull (bright N%)` en el log). Empezó en 30 %, pero las palmadas del
    usuario dan 21–35 %: con la tele encendida la segunda de cada doble se perdía (21, 23, 25 y 28 %) y dos
-   palmadas no la apagaban. Con el 18 %, 14 golpes de nudillos en la mesa midieron 4–15 % y se descartaron todos;
+   palmadas no la apagaban. Con el 18 %, 14 golpes de nudillos en la mesa midieron 4–15 % y se descartaron todos; **dentro de la carcasa** el plástico apaga los agudos y las mismas palmadas dan 11–17 %, así que el límite
+   bajó al 10 % (2026-10-03); con tres palmadas obligatorias, a ritmo y de fuerza parecida, el brillo pesa menos;
 6. tras una palmada se ignora todo **180 ms** (su eco: unas manos nunca van más rápido);
 7. las palmadas a menos de **700 ms** forman una secuencia, que se comprueba y se informa **al cerrarse la
-   ventana**: 2 o 3 palmadas con **ritmo de manos** (≤ 600 ms entre ellas) y de **fuerza parecida** (±9 dB).
-   **4 o más** (una alarma que pita, algo que traquetea) no son nada. Con dos palmadas la tele espera por si llega la
-   tercera, así que una triple nunca apaga antes de cambiar de canal.
+   ventana**: 2 o 3 palmadas con **ritmo de manos** (≤ 600 ms entre ellas) y de **fuerza parecida** (±12 dB; era
+   ±9, y una triple real del usuario tuvo 10,1 dB de diferencia).
+   **4 o más** (una alarma que pita, algo que traquetea) no son nada. La tele espera a que se cierre la ventana, así
+   que cuatro palmadas nunca cuentan como tres.
 
 | Secuencia | Con un programa en marcha | En menús y diagnóstico |
 |---|---|---|
 | 1 palmada | nada (reservada al standby de v0.2) | nada |
-| 2 palmadas | apagado CRT y STANDBY VOZ; dos palmadas la vuelven a encender | se registra, no actúa |
-| 3 o más | `InputEvent::ChNext`: la estática y el OSD del canal | se registra, no actúa |
+| 2 palmadas | nada (se registra) | se registra, no actúa |
+| 3 palmadas | apagado CRT y STANDBY VOZ; tres palmadas la vuelven a encender | se registra, no actúa |
+| 4 o más | nada | nada |
 
 **La tele se oye a sí misma.** Tres defensas, además del fondo dinámico y los +6 dB con sonido:
 
@@ -170,6 +174,13 @@ Con eso, una sala tranquila lee **−58 a −67 dBFS** y una palmada a 0,5–1 m
    400 Hz**: el altavoz pequeño casi no da graves, así que una caja sobre un bajo apenas cambia el nivel de banda
    completa pero el micro la oye como un golpe seco. Cada palmada aceptada deja en el log cuánto subió el programa
    a su alrededor (`tv rise`), para afinar los 8 dB.
+   **Pero no a una palmada fuerte:** en un programa con diálogo o música hay subidas así a cada momento, y la
+   mitad de las palmadas del usuario caían en una por casualidad (2026-10-03, en la carcasa). Un golpe a −30 dBFS o
+   más **y** 28 dB o más por encima del fondo cuenta como palmada aunque el programa suba: las palmadas del usuario
+   midieron −10 a −25 dBFS y 30,5–45 dB sobre el fondo; los golpes del propio programa, 24–32 dB sobre el fondo pero
+   a −38/−44 dBFS, y los puñetazos a volumen 75, −14 a −24 dBFS pero como mucho 26 dB sobre el fondo. Cada descarte
+   deja `[CLAP] taken for the TV's own sound: peak …, floor …, the programme rose …` en el log. Con la tele en
+   silencio (o volumen 0) este filtro no actúa: el altavoz no puede imitar una palmada.
 
 ### Calibración (datos reales, 2026-10-02)
 
@@ -202,18 +213,19 @@ al 18 %, en el límite. Si aparece una doble falsa, el log dirá con qué brillo
 hip-hop, al 75 %, en la misma sala, con el mismo micrófono). Dicen que esa escena, que antes fallaba, ya no apaga la
 tele. No son una validación prolongada: faltan otros programas (música, deportes, directos), otros volúmenes, otras
 salas y muchas horas de uso normal. El margen es pequeño (sordos hasta 18 %, límite 18 %; subidas del programa de
-7,5 dB, límite 8 dB), así que **una doble falsa sigue siendo posible**, y ahora apaga la tele en vez de silenciarla.
+7,5 dB, límite 8 dB), así que una secuencia falsa sigue siendo posible. Desde el 2026-10-03 apagar exige **tres** palmadas y las dobles
+no hacen nada: una doble falsa ya no apaga; una triple falsa sí, pero es mucho más rara (en estas pruebas, ninguna).
 
 ## STANDBY VOZ (v0.2)
 
-**AJUSTES → VOZ → APAGADO** elige qué hace ⏻ (o mantener CH− 2 s). Dos palmadas con un programa en marcha apagan
+**AJUSTES → VOZ → APAGADO** elige qué hace ⏻ (o mantener CH− 2 s). Tres palmadas con un programa en marcha apagan
 siempre a STANDBY VOZ:
 
 | | AHORRO MAX (por defecto) | STANDBY VOZ |
 |---|---|---|
 | Apagado CRT, pantalla, retroiluminación, piloto, altavoz y Wi-Fi | apagados | apagados |
 | Chip | deep sleep | despierto a 80 MHz, con la captura del micrófono |
-| Enciende con | una tecla | **dos palmadas con silencio alrededor** o una tecla |
+| Enciende con | una tecla | **tres palmadas con silencio alrededor** o una tecla |
 | Cada palmada oída | — | destello de 120 ms del piloto ("te he oído"), si LED ESCUCHA está en ON |
 | Batería agotada | deep sleep | deep sleep (deja de escuchar) |
 | Consumo | el del deep sleep (T22.4) | ~40 mA estimados (una noche, sin medidor): ~3 días desde llena |
@@ -222,21 +234,22 @@ siempre a STANDBY VOZ:
   primero y luego `voiceStandby()`.
 - **Encender es reiniciar** (`ESP.restart()`): exactamente el mismo arranque que al despertar del deep sleep, con
   la intro, el último canal y el volumen guardado. No hay un arranque especial.
-- En standby enciende una secuencia de **exactamente dos palmadas** que pasó las comprobaciones, con cada palmada a
+- En standby enciende una secuencia de **exactamente tres palmadas** que pasó las comprobaciones, con cada palmada a
   **−36 dBFS** o más (cerca de la tele) y **silencio alrededor**: ningún golpe en los 2,5 s anteriores ni en los
   ~1,2 s posteriores (la ventana de 0,7 s más 0,5 s de espera). Los ruidos de casa suelen venir en grupo; una persona
   da las palmadas tras un momento de silencio. El piloto destella con cada palmada que oye
-  (`voice/VoiceStandby.h`, con tests). **No es infalible:** dos golpes aislados que suenen como palmadas, con
-  silencio alrededor, la encienden igual, y unas palmadas flojas, lejos o justo después de otro ruido no la
-  encienden. Probado: 5 golpes sueltos que no la encendieron y la doble del usuario que sí, en una sesión corta;
-  y una noche sin encenderse sola (deducido de la batería, sin log). Si los falsos encendidos molestan, AHORRO MAX
+  (`voice/VoiceStandby.h`, con tests). **No es infalible:** tres golpes al ritmo de unas manos y con silencio
+  alrededor la encenderían igual, aunque es mucho más raro que con dos; y unas palmadas flojas, lejos o justo
+  después de otro ruido no la encienden. Con la regla de dos palmadas se probó: 5 golpes sueltos que no la
+  encendieron y la doble del usuario que sí, y una noche sin encenderse sola (deducido de la batería, sin log). Si los falsos encendidos molestan, AHORRO MAX
   los quita (pero entonces solo enciende una tecla).
 - Historia: la primera versión encendía con el segundo golpe al momento, y el usuario vio que cualquier golpe,
   alarma o ruido la encendía. La segunda exigía una doble comprobada (ritmo, fuerza, brillo); paró la mayoría,
   pero un ruido de casa dio una pareja que pasaba todas las comprobaciones (−13/−17 dB, 52/66 % de agudos, más
   brillante que las palmadas del usuario, 32–35 %), aunque llegó 1,6 s después de otro golpe. Ninguna regla de
-  sonido separa con fiabilidad dos golpes al azar de dos palmadas. Tres palmadas a ritmo serían más seguras, pero
-  el usuario prefirió dos; la tercera versión exige silencio antes y después.
+  sonido separa con fiabilidad dos golpes al azar de dos palmadas. El usuario prefirió dos y la tercera versión exige
+  silencio antes y después; con el uso, "con dos se cuelan muchas cosas aún" (2026-10-03), y apagar y encender pasó
+  a **tres palmadas**, con el mismo silencio alrededor.
 - No hay sonido propio que filtrar (el amplificador está apagado), así que el umbral es el de la sala.
 - Sin Wi-Fi el mando web no responde, igual que con el deep sleep.
 - **Carcasa sin botones** (`pio run -e voice_nokeys`, `PAUTV_HAS_KEYS 0`): apagar es STANDBY VOZ, porque del deep

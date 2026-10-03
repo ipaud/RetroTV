@@ -169,7 +169,7 @@ class App {
   void updateMessages(uint32_t nowMs);
   void stopMessages();
   void publishMessages(uint32_t nowMs);
-  [[noreturn]] void voiceStandby();  // STANDBY VOZ: listening; two claps (or a key) restart the TV
+  [[noreturn]] void voiceStandby();  // STANDBY VOZ: listening; three claps (or a key) restart the TV
 
   // AppTeletext.cpp
   void startTeletext();
@@ -309,6 +309,7 @@ class App {
   uint32_t micTestUntilMs_ = 0;   // serial `v`: levels to the log until then (0 = off)
   uint32_t micTestLogMs_ = 0;
   uint32_t dullSeen_ = 0;  // dull transients already logged
+  uint32_t fromTvSeen_ = 0;  // transients taken for the programme, already logged
   char lastClap_[UI_LINE_LEN] = "";  // the MICROFONO screen shows the last sequence heard
 #if PAUTV_RECORDER_ENABLED
   RecorderFlow recFlow_;

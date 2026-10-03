@@ -1,7 +1,7 @@
 // RETROTV Voice in the App (docs/VOICE.md): settings, claps, the microphone screen, MIC TEST.
 // Every function is empty in the normal build (PAUTV_MIC_ENABLED = 0): the TV behaves as before.
-// Claps never get logic of their own: a double clap is InputEvent::Mute, a triple one
-// InputEvent::ChNext, handled exactly like the front keys.
+// Claps: three switch the TV off into STANDBY VOZ (and, there, on again); two do nothing. Builds
+// without clap wake keep the old meaning: two = InputEvent::Mute, three = InputEvent::ChNext.
 
 #include "app/App.h"
 
@@ -44,6 +44,15 @@ void App::pollClaps() {
     dullSeen_ = mic_.dull();
     PLOG("CLAP", "too dull (bright %u%%)", static_cast<unsigned>(mic_.snapshot().clapHfPct));
   }
+  if (mic_.fromTv() != fromTvSeen_) {  // for tuning the programme filter: what was dropped, and why
+    fromTvSeen_ = mic_.fromTv();
+    const AudioCapture::Snapshot m = mic_.snapshot();
+    char peak[8], floor[8], rise[8];
+    db10Text(m.tvPeakDb10, peak, sizeof(peak));
+    db10Text(m.tvFloorDb10, floor, sizeof(floor));
+    db10Text(m.clapTvRiseDb10, rise, sizeof(rise));
+    PLOG("CLAP", "taken for the TV's own sound: peak %s dB, floor %s dB, the programme rose %s dB", peak, floor, rise);
+  }
   const uint8_t claps = mic_.takeSequence();
   if (claps == 0) return;
   const AudioCapture::Snapshot m = mic_.snapshot();
@@ -57,16 +66,21 @@ void App::pollClaps() {
   db10Text(m.clapTvRiseDb10, tvRise, sizeof(tvRise));
   PLOG("CLAP", "%s (gap %lu ms, peak %s dB, floor %s dB, tv rise %s dB, bright %u%%) in %s%s",
        claps == 1 ? "single" : (claps == 2 ? "double" : "triple"), static_cast<unsigned long>(m.clapGapMs),
-       peak, floor, tvRise, static_cast<unsigned>(m.clapHfPct), appStateName(state_), act && claps > 1 ? "" : ": ignored");
+       peak, floor, tvRise, static_cast<unsigned>(m.clapHfPct), appStateName(state_),
+       act && (PAUTV_CLAP_WAKE_ENABLED ? claps == CLAP_POWER_CLAPS : claps > 1) ? "" : ": ignored");
   if (!act) return;
-  if (claps == 2) {
 #if PAUTV_CLAP_WAKE_ENABLED
-    // Off into STANDBY VOZ whatever APAGADO says: what two claps switched off, two claps switch on.
-    PLOG("POWER", "standby: two claps");
+  // Three claps: off into STANDBY VOZ whatever APAGADO says, so three claps switch it on again. Two do
+  // nothing: that is what household noises pass for.
+  if (claps == CLAP_POWER_CLAPS) {
+    PLOG("POWER", "standby: %u claps", static_cast<unsigned>(claps));
     blinkLed();
     powerDown();
     voiceStandby();  // does not return
+  }
+  return;
 #endif
+  if (claps == 2) {  // builds without clap wake: 2 = mute, 3 = next channel, as before
     onInput(InputEvent::Mute);  // the same path as the MUTE key
     OsdState o;
     o.visible = true;
@@ -215,7 +229,7 @@ bool App::voiceStandbyPossible() const {
 // slowed down. One clap flashes the LED; a second one (or any key) restarts the TV, the same boot
 // as from deep sleep: intro, last channel, saved volume. A flat battery still ends in deep sleep.
 void App::voiceStandby() {
-  PLOG("STANDBY", "voice standby: listening for two claps (or a key); heap %u KB (largest %u KB), psram %u KB",
+  PLOG("STANDBY", "voice standby: listening for three claps (or a key); heap %u KB (largest %u KB), psram %u KB",
        static_cast<unsigned>(ESP.getFreeHeap() / 1024), static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024),
        static_cast<unsigned>(ESP.getFreePsram() / 1024));
   mic_.setPaused(false);
@@ -233,6 +247,7 @@ void App::voiceStandby() {
   VoiceStandby standby;
   uint32_t ledOffAtMs = 0;
   uint32_t batteryMs = millis();
+  uint32_t micBlocks = mic_.snapshot().blocks;  // a capture that stops delivering audio is logged
   for (;;) {
     const uint32_t now = millis();
     const uint8_t clap = mic_.takeClapIndex();
@@ -279,6 +294,15 @@ void App::voiceStandby() {
 #endif
     if (now - batteryMs >= BATTERY_READ_MS) {
       batteryMs = now;
+      // 2026-10-03: once a clap sequence was reported 22 s late and its third clap lost, as if no audio
+      // arrived meanwhile. Say so if it happens again (blocks should advance ~86 per second).
+      const AudioCapture::Snapshot m = mic_.snapshot();
+      if (m.blocks == micBlocks) {
+        PLOG("STANDBY", "microphone delivered no audio for %lu ms (blocks %lu, overruns %lu)",
+             static_cast<unsigned long>(BATTERY_READ_MS), static_cast<unsigned long>(m.blocks),
+             static_cast<unsigned long>(m.overruns));
+      }
+      micBlocks = m.blocks;
       battery_.update(Diagnostics::readBatteryMv());
       if (battery_.empty()) {
         PLOG("STANDBY", "battery flat (%lu mV): deep sleep instead", static_cast<unsigned long>(battery_.millivolts()));
@@ -288,7 +312,7 @@ void App::voiceStandby() {
       }
     }
     if (wake) {
-      PLOG("STANDBY", "%s: switching on", a == StandbyAction::Wake ? "two claps" : "woken");
+      PLOG("STANDBY", "%s: switching on", a == StandbyAction::Wake ? "three claps" : "woken");
       Serial.flush();
       ESP.restart();
     }

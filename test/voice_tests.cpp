@@ -363,24 +363,36 @@ static void testHighPass() {
 }
 
 static void testClapThatIsTheProgramme() {
-  // The speaker went bang right when the mic heard a "clap": the TV hearing itself.
-  Signal sig;
-  sig.length(2500);
-  sig.background(-60.0f);
-  sig.clap(1000, -15.0f);
+  // The speaker went bang right when the mic heard a "clap": the TV hearing itself. (The detector's
+  // 5 ms windows read these synthetic bursts ~10 dB under their peak.) A loud scene: the bang stands
+  // little over the raised floor (~27 dB).
   PlaybackEnvelope tv;
   for (uint32_t t = 900; t < 1200; t += 6) tv.push(t, t >= 1000 && t < 1012 ? -120 : -400);
-  ClapDetector heard;
-  heard.setPlayback(&tv);
-  Run r = feed(heard, sig, 0);
-  CHECK(r.claps == 0 && heard.stats().fromTv == 1);
-
-  // The same clap with the programme quiet (or its bang a second away) is a real one.
+  auto heardWith = [&](float background, float clap, const PlaybackEnvelope& env, ClapDetector& d) {
+    Signal sig;
+    sig.length(2500);
+    sig.background(background);
+    sig.clap(1000, clap);
+    d.setPlayback(&env);
+    return feed(d, sig, 0);
+  };
+  ClapDetector loudScene;
+  Run r = heardWith(-42.0f, -5.0f, tv, loudScene);
+  CHECK(r.claps == 0 && loudScene.stats().fromTv == 1);
+  // A quiet scene: the bang stands far over the floor (~45 dB), but it is faint (~-35 dBFS).
+  ClapDetector quietScene;
+  r = heardWith(-80.0f, -25.0f, tv, quietScene);
+  CHECK(r.claps == 0 && quietScene.stats().fromTv == 1);
+  // A hand clap, loud (~-20 dBFS) and far over the floor (~40 dB), is one even if the programme rose by
+  // chance right then.
+  ClapDetector hand;
+  r = heardWith(-60.0f, -10.0f, tv, hand);
+  CHECK(r.claps == 1 && hand.stats().fromTv == 0);
+  // The loud scene's bang with the programme quiet (its bang a second away) counts as a clap.
   PlaybackEnvelope quiet;
   for (uint32_t t = 900; t < 1200; t += 6) quiet.push(t, t >= 2000 && t < 2012 ? -120 : -400);
   ClapDetector real;
-  real.setPlayback(&quiet);
-  r = feed(real, sig, 0);
+  r = heardWith(-42.0f, -5.0f, quiet, real);
   CHECK(r.claps == 1 && real.stats().fromTv == 0);
 }
 
@@ -388,21 +400,21 @@ static void testStandbyClaps() {
   constexpr uint32_t QUIET = STANDBY_QUIET_BEFORE_MS + 500;
   VoiceStandby s;
   CHECK(s.onClap(0) == StandbyAction::None);   // nothing heard
-  CHECK(s.onClap(1) == StandbyAction::Blink && s.onClap(2) == StandbyAction::Blink);  // the LED counts
+  CHECK(s.onClap(1) == StandbyAction::Blink && s.onClap(3) == StandbyAction::Blink);  // the LED counts
   s.onSequence(1, QUIET, 10, 1000);
   CHECK(!s.pending() && s.update(10, 5000) == StandbyAction::None);  // one clap: stays off
-  s.onSequence(3, QUIET, 10, 1000);
-  CHECK(!s.pending());                                               // three: not the sign
-  s.onSequence(2, 1600, 10, 1000);
-  CHECK(!s.pending());                                               // a bang 1.6 s before (the user's case)
   s.onSequence(2, QUIET, 10, 1000);
+  CHECK(!s.pending());                                               // two: what household pairs pass for
+  s.onSequence(3, 1600, 10, 1000);
+  CHECK(!s.pending());                                               // a bang 1.6 s before
+  s.onSequence(3, QUIET, 10, 1000);
   CHECK(s.pending() && s.update(10, 1000 + STANDBY_QUIET_AFTER_MS - 1) == StandbyAction::None);
   CHECK(s.update(11, 1000 + STANDBY_QUIET_AFTER_MS) == StandbyAction::None && !s.pending());  // a bang after
-  s.onSequence(2, UINT32_MAX, 20, 2000);                             // nothing ever heard before: fine
+  s.onSequence(3, UINT32_MAX, 20, 2000);                             // nothing ever heard before: fine
   CHECK(s.update(20, 2000 + STANDBY_QUIET_AFTER_MS) == StandbyAction::Wake && s.waking());
   CHECK(s.onClap(1) == StandbyAction::None);                         // already waking
   s.cancelWake();                                                    // e.g. a flat battery: keep listening
-  s.onSequence(2, QUIET, 30, 3000);
+  s.onSequence(3, QUIET, 30, 3000);
   CHECK(!s.waking() && s.update(30, 3000 + STANDBY_QUIET_AFTER_MS) == StandbyAction::Wake);
 }
 

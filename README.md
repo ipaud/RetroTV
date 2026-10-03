@@ -60,9 +60,9 @@ una microSD, altavoz y batería. Puedes manejarla con sus botones, con palmadas 
   la tele.
 - 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos, guía y ajustes, sin app ni
   nube. Cuatro diseños de mandos de época, que se cambian deslizando el dedo. Un canal enseña un QR para abrirlo.
-- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: dos palmadas la apagan y dos más, con silencio
-  alrededor, la encienden (STANDBY VOZ); tres cambian de canal. No es infalible: algún golpe puede colarse y alguna
-  palmada floja no contar. Una grabadora de mensajes de 15 s y un canal MENSAJES que los pone. Todo en la tele, sin
+- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: **tres palmadas** la apagan y otras tres, con
+  silencio alrededor, la encienden (STANDBY VOZ). Dos no hacen nada: es lo que más se cuela. No es infalible: algún
+  ruido puede colarse y alguna palmada floja no contar. Una grabadora de mensajes de 15 s y un canal MENSAJES que los pone. Todo en la tele, sin
   Internet. Las palmadas no graban nada; la grabadora guarda un WAV en la microSD solo cuando la pones en marcha, con
   ● REC en pantalla ([docs/VOICE.md](docs/VOICE.md)). "HEY RETRO" y los comandos de voz **no están implementados**.
 - 🔋 **Portátil.** LiPo de 3000 mAh dentro, aviso en pantalla, reposo profundo (también solo, con la batería
@@ -651,7 +651,7 @@ SDKROOT=$(xcrun --show-sdk-path) CXX=g++-16 tools/run_host_tests.sh   # GCC de H
 SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 ```
 
-Son 684 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
+Son 686 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
 bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi, batería y voz: niveles, palmadas, standby por
 voz y grabadora), compiladas con clang, ASan y UBSan, más los autotests de `make_index.py` y `make_dist.py`. No hace falta la placa.
