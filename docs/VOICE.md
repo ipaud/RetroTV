@@ -20,7 +20,7 @@ Internet y **no guarda audio**.
 | STANDBY VOZ: cada palmada = destello del piloto | **implementado, probado** (v0.2) | |
 | STANDBY VOZ: dos palmadas con silencio alrededor = encender | **implementado, probado** | la primera versión se encendía con ruidos de casa; falta una prueba larga |
 | Selector APAGADO: STANDBY VOZ / AHORRO MAX | implementado (v0.2) | por defecto AHORRO MAX, como siempre |
-| Consumo de STANDBY VOZ | **sin medir** | hace falta un medidor USB o un amperímetro |
+| Consumo de STANDBY VOZ | **estimado ~40 mA** (30–50) | una noche: 72 → 64 % en ~6 h; ~3 días desde llena. Falta un medidor |
 | Falsos encendidos en standby | sin medir | |
 | Grabadora (GRABADORA, 3-2-1, ● REC, WAV 16 kHz) | **implementada, probada** con la voz del usuario (v0.3) | se guarda subida al nivel de voz; la voz llega floja al micro, mejor a 20–30 cm |
 | Canal MENSAJES | **implementado, probado** (v0.3) | el micro oyó los mensajes por el altavoz, en orden y en bucle |
@@ -187,7 +187,7 @@ siempre a STANDBY VOZ:
 | Enciende con | una tecla | **dos palmadas con silencio alrededor** o una tecla |
 | Cada palmada oída | — | destello de 120 ms del piloto ("te he oído"), si LED ESCUCHA está en ON |
 | Batería agotada | deep sleep | deep sleep (deja de escuchar) |
-| Consumo | el del deep sleep (T22.4) | sin medir |
+| Consumo | el del deep sleep (T22.4) | ~40 mA estimados (una noche, sin medidor): ~3 días desde llena |
 
 - `enterStandby()` se partió en `powerDown()` (todo lo que se ve y se oye) y `deepSleep()`; STANDBY VOZ usa el
   primero y luego `voiceStandby()`.
