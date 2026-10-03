@@ -300,7 +300,7 @@ text-shadow:0 -1px 0 #0009,0 1px 0 #ffffff24}
 <ul class="list">
 <li><label class="chl"><input type="checkbox" class="sw" id="vmic"><span>Micr&oacute;fono</span></label></li>
 <li><label class="chl"><input type="checkbox" class="sw" id="vclap"><span>Palmadas</span></label></li>
-<li><label class="chl"><input type="checkbox" class="sw" id="vsb"><span>Al apagar, seguir escuchando palmadas (STANDBY VOZ)</span></label></li>
+<li><label class="chl"><input type="checkbox" class="sw" id="vsb"><span>Escuchar palmadas al apagar</span></label></li>
 <li><label class="chl"><input type="checkbox" class="sw" id="vled"><span>Piloto al o&iacute;r una palmada</span></label></li>
 </ul>
 <label class="fld">Sensibilidad <output id="vso"></output><input type="range" id="vsen" min="0" max="100" step="10"></label>

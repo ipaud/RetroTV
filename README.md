@@ -23,7 +23,10 @@
 <p align="center">
   <a href="#primeros-pasos">Montarla</a> ·
   <a href="#qué-hace">Qué hace</a> ·
+  <a href="#en-15-segundos">En 15 segundos</a> ·
+  <a href="#teletexto">Teletexto</a> ·
   <a href="#mando-web">Mando web</a> ·
+  <a href="#palmadas-y-mensajes">Palmadas</a> ·
   <a href="#hardware">Hardware</a>
 </p>
 
@@ -36,7 +39,7 @@ lleva emitiendo desde antes de que llegaras. Cambias de canal y llegan el siseo,
 <p align="center">
   <img src="docs/img/case-front.jpg" width="42%" alt="Render de la carcasa tele90 v9, con cuatro teclas y carta de ajuste">
   <img src="docs/img/remote-designs.gif" width="55%" alt="Recorrido animado por los cuatro diseños del mando web: clásico, negro, plata y gris">
-  <br><sub>Carcasa tele90 v9 · Cuatro diseños de mando para el móvil (animación hecha con los renders del proyecto).</sub>
+  <br><sub>Carcasa tele90 v9 · Los cuatro mandos del móvil, capturados de la página real con canales y logos de ejemplo.</sub>
 </p>
 
 La carcasa es un diseño propio para impresión 3D. Dentro lleva la [Freenove ESP32-S3 Display 2.8″](#hardware),
@@ -45,7 +48,9 @@ una microSD, altavoz y batería. Puedes manejarla con sus botones, con palmadas 
 
 > [!NOTE]
 > El repositorio no contiene contenido de series o películas. Cada usuario convierte sus propios vídeos y los copia
-> a la microSD. La intro, las imágenes y la animación de mandos de esta página son material del proyecto.
+> a la microSD. Las imágenes de esta página son material del proyecto: renders de la carcasa, la intro, escenas del
+> vídeo del canal 0, capturas del mando con canales y logos inventados, y páginas de teletexto dibujadas con el código
+> del firmware.
 
 ## Qué hace
 
@@ -60,20 +65,31 @@ una microSD, altavoz y batería. Puedes manejarla con sus botones, con palmadas 
   la tele.
 - 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos, guía y ajustes, sin app ni
   nube. Cuatro diseños de mandos de época, que se cambian deslizando el dedo. Un canal enseña un QR para abrirlo.
-- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: **tres palmadas** la apagan y otras tres, con
-  silencio alrededor, la encienden (STANDBY VOZ). Dos no hacen nada: es lo que más se cuela. No es infalible: algún
-  ruido puede colarse y alguna palmada floja no contar. Una grabadora de mensajes de 15 s y un canal MENSAJES que los pone. Todo en la tele, sin
-  Internet. Las palmadas no graban nada; la grabadora guarda un WAV en la microSD solo cuando la pones en marcha, con
-  ● REC en pantalla ([docs/VOICE.md](docs/VOICE.md)). "HEY RETRO" y los comandos de voz **no están implementados**.
+- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`, **tres palmadas** la apagan y otras tres la
+  encienden. Una grabadora de mensajes de 15 s y un canal MENSAJES que los pone, todo en la tele y sin Internet
+  ([más abajo](#palmadas-y-mensajes)).
 - 🔋 **Portátil.** LiPo de 3000 mAh dentro, aviso en pantalla, reposo profundo (también solo, con la batería
   agotada) y encendido con cualquier tecla.
+
+## En 15 segundos
+
+<p align="center">
+  <img src="docs/img/como-funciona.gif" width="560" alt="Escenas del vídeo de bienvenida del canal 0: se enchufa y arranca sola, la tele no espera porque los canales siguen su horario, el teletexto con lo que echa cada canal y el canal del mando con su QR">
+  <br><sub>Escenas del canal 0, el vídeo de bienvenida del proyecto: enchufar, la tele no espera, teletexto y mando por QR.</sub>
+</p>
+
+1. **Se enchufa y arranca sola.** La línea del tubo se abre, suena la estática y entra el último canal que veías.
+2. **La tele no espera.** Cada canal sigue su horario aunque nadie lo mire: si vuelves en diez minutos, el capítulo
+   ha avanzado diez minutos.
+3. **El teletexto lo sabe todo.** Qué echa cada canal ahora, cuánto le queda y qué viene después.
+4. **El móvil es el mando.** El canal MANDO enseña un QR; se escanea y el móvil manda la tele por la Wi-Fi de casa.
 
 ## Índice
 
 - [Cómo funciona](#cómo-funciona)
 - [Hardware](#hardware)
 - [Primeros pasos](#primeros-pasos)
-- [Controles](#controles) · [Mando web](#mando-web)
+- [Controles](#controles) · [Mando web](#mando-web) · [Palmadas y mensajes](#palmadas-y-mensajes)
 - [Canales](#canales-retrotvconfigchannelsjson) · [En emisión](#en-emisión) · [Teletexto](#teletexto) ·
   [Canales por red](#canales-por-red-retrotv-server)
 - [microSD](#microsd) · [Convertir capítulos](#convertir-capítulos) · [Wi-Fi](#wi-fi)
@@ -249,7 +265,8 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
 
 <p align="center">
   <img src="docs/img/mandos.jpg" width="100%" alt="Los cuatro diseños del mando web con una parrilla de ejemplo: CLÁSICO, oscuro con pantalla verde; NEGRO, con teclas beige, pantalla naranja y un panel con volumen, INFO redondo y canal en naranja; PLATA, plateado con teclas de colores y un aro de cruceta; GRIS, con cabeza redonda que lleva volumen, encendido rosa y canal">
-  <br><sub>De izquierda a derecha: CLÁSICO, NEGRO, PLATA y GRIS, con canales y logos de ejemplo.</sub>
+  <br><sub>De izquierda a derecha: CLÁSICO, NEGRO, PLATA y GRIS, con canales y logos inventados. Los tres primeros enseñan
+  los logos en color; el GRIS, en una sola tinta.</sub>
 </p>
 
 <img src="docs/img/sticker.png" width="300" align="right" alt="Pegatina trasera de RETROTV con el QR del mando y las instrucciones de encendido">
@@ -261,7 +278,7 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
   uno. La pantalla de arriba muestra el canal y el volumen actuales. Los canales remotos llevan un punto rojo.
 - **Cómo funciona:** las órdenes entran por el mismo camino que los mandos físicos. Un salto directo pasa por la
   estática y el destello, como un zapeo.
-- **Dónde vive:** la página la sirve la propia tele, sin nube y sin el Mac. Pesa unos 38 KB y funciona sin Internet.
+- **Dónde vive:** la página la sirve la propia tele, sin nube y sin el Mac. Pesa unos 42 KB y funciona sin Internet.
 - **Cuatro mandos (botón MANDO, o deslizando el dedo a un lado):** cada uno con la forma, los colores y la colocación
   de un mando de verdad:
   - CLÁSICO, el de siempre;
@@ -300,9 +317,10 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
 - **Wi-Fi:** las redes guardadas (sin contraseña), BUSCAR REDES para las de 2,4 GHz al alcance y AÑADIR RED, que la
   guarda en `wifi.json` de la SD. Las redes de `secrets.h` van en el firmware y no se pueden borrar desde aquí.
 - **Pantalla y sonido:** brillo y volumen, guardados como con los mandos.
-- **Voz** (solo con el firmware `voice`): micrófono, palmadas, sensibilidad, apagar escuchando palmadas (STANDBY VOZ)
+- **Voz** (solo con el firmware `voice`): micrófono, palmadas, sensibilidad, escuchar palmadas al apagar (STANDBY VOZ)
   y el destello del piloto al oír una palmada; los mismos ajustes que AJUSTES → VOZ en la tele. La grabadora no está
-  aquí a propósito: el mando no tiene PIN y cualquiera en la Wi-Fi podría grabar la sala.
+  aquí a propósito: el mando no tiene PIN y cualquiera en la Wi-Fi podría grabar la sala
+  ([ver más abajo](#palmadas-y-mensajes)).
 - **Canales:** activa o desactiva cada canal. Se guarda en `channels.json` de la SD; el zapeo y el mando se saltan los
   desactivados.
 - **Información:** versión, Wi-Fi, IP, SD, memoria y REINICIAR LA TELE.
@@ -336,6 +354,31 @@ Los `POST` necesitan la cabecera `X-RETROTV: 1`. Los ajustes van en `/api/config
   y `reboot`.
 
 </details>
+
+## Palmadas y mensajes
+
+Con el firmware `voice` (`platformio run -e voice --target upload`; en la carcasa sin botones, `-e voice_nokeys`) la
+tele usa su micrófono. Todo pasa dentro de la tele: sin Internet y sin servicios de reconocimiento.
+
+<img src="docs/img/ajustes-voz.jpg" width="250" align="right" alt="Apartado VOZ de los ajustes del mando web: micrófono, palmadas, escuchar palmadas al apagar, piloto al oír una palmada y sensibilidad 80">
+
+- **Apagar y encender con tres palmadas.** Con un canal puesto, tres palmadas seguidas (plas-plas-plas, a menos de
+  0,7 s entre ellas) la apagan con el efecto del tubo y la dejan en STANDBY VOZ, escuchando. Tras un momento de
+  silencio, otras tres la encienden. El piloto destella con cada palmada que oye. Dos palmadas no hacen nada: es lo
+  que más se cuela.
+- **No es infalible.** Funciona con palmadas firmes a 0,5–1 m. Algún ruido de casa puede colarse, y una palmada floja
+  que coincide con un golpe del programa no cuenta. La sensibilidad (80 por defecto) se cambia en AJUSTES → VOZ, en la
+  tele o en el mando.
+- **Consumo.** STANDBY VOZ gasta unos 40 mA (estimado de una noche, sin medidor): unos 3 días desde llena. Con la
+  batería agotada, duerme del todo.
+- **Mensajes.** AJUSTES → VOZ → GRABAR MENSAJE: cuenta atrás, ● REC hasta 15 s, y se guarda como WAV en la microSD,
+  subido al nivel de la voz para que se oiga bien. El canal **MENSAJES** se añade solo a la lista y los pone en bucle.
+- **Privacidad.** Las palmadas no graban nada: solo miden niveles. La grabadora solo graba cuando la pones en marcha
+  desde la tele, con ● REC en pantalla; el mando web no puede grabar.
+- **Lo que no hay:** ni "HEY RETRO" ni comandos de voz.
+
+Detalle, medidas y pruebas: [docs/VOICE.md](docs/VOICE.md).
+<br clear="right">
 
 ## Canales (`/retrotv/config/channels.json`)
 
@@ -408,6 +451,12 @@ canales en directo salen de la guía del servidor.
 | **P100** Inici | Portada: fecha, índice y cómo pasar de página |
 | **P101** Ara en emissió | Todos los canales: el capítulo de ahora y los minutos que le quedan (5 por subpágina: 1/3, 2/3…) |
 | **P2NN** | La guía del canal NN (P203 = canal 3): el capítulo de ahora con una barra de progreso y los 4 siguientes con su hora |
+
+<p align="center">
+  <img src="docs/img/teletext.gif" width="480" alt="El teletexto pasando de página: P100 portada con la fecha y el índice, P101 lo que echa cada canal y los minutos que quedan, P202 y P203 la guía de un canal con barra de progreso y los siguientes capítulos">
+  <br><sub>P100 → P101 → P202 → P203, con canales inventados. Dibujado con la fuente, los colores y el repintado de arriba
+  abajo del firmware (<code>Teletext.h</code> y <code>UITeletext.cpp</code>), a 320×240 y ampliado al doble.</sub>
+</p>
 
 - **Pasar de página:** solas cada 12 s, en orden. VOLUMEN +/− (o un toque) pasa a mano; la página elegida se queda 60 s.
 - **Estilo:** rejilla de 26×15 caracteres con los 8 colores del teletexto y títulos a doble altura. Es mudo.
