@@ -1,36 +1,51 @@
 <p align="center">
-  <img src="docs/img/logo-crt.jpg" width="440" alt="Logo de RETROTV en una pantalla de tubo azul, con tres franjas de colores">
+  <img src="docs/img/logo-crt.jpg" width="360" alt="RETROTV: logo en una pantalla de tubo">
 </p>
 
 <h1 align="center">RETROTV</h1>
 
 <p align="center">
-  <b>Una tele de tubo de los 90, en pequeño.</b><br>
-  Firmware para la Freenove ESP32-S3 Display 2.8" que convierte una microSD en canales que <i>ya están emitiendo</i>.
+  <strong>Una tele de tubo de los 90, en pequeño.</strong><br>
+  Enciende, sintoniza y entra en un canal que ya estaba emitiendo.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/ESP32--S3-Freenove%202.8%22-E7352C?logo=espressif&logoColor=white" alt="ESP32-S3">
   <img src="https://img.shields.io/badge/PlatformIO-espressif32%406.9.0-F5822A?logo=platformio&logoColor=white" alt="PlatformIO">
   <img src="https://img.shields.io/badge/Arduino%20core-2.0.17-00979D?logo=arduino&logoColor=white" alt="Arduino core 2.0.17">
-  <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17">
-  <img src="https://img.shields.io/badge/tests-684%20comprobaciones-2EA44F" alt="684 comprobaciones">
-  <img src="https://img.shields.io/badge/versi%C3%B3n-0.2.0--alpha2-555" alt="Versión 0.2.0-alpha2">
 </p>
 
 <p align="center">
-  <img src="docs/img/case-front.jpg" width="49%" alt="Render de la carcasa tele90 v9 de frente, con la carta de ajuste en pantalla">
-  <img src="docs/img/intro.gif" width="40%" alt="Intro de encendido: línea del tubo que se abre y el logo RETROTV">
+  <img src="docs/img/intro.gif" width="480" alt="Animación real de encendido: la línea del CRT se abre y aparece RETROTV">
+  <br><sub>El encendido del firmware, fotograma a fotograma.</sub>
 </p>
 
-Enciendes y la pantalla se abre desde la línea del tubo. Suena la estática, aparece un canal y está a mitad de capítulo,
-porque lleva emitiendo desde antes de que llegaras. Cambias de canal: estática, siseo, un destello y el siguiente, con
-su número en pantalla. **No parece un reproductor de archivos: parece una tele.**
+<p align="center">
+  <a href="#primeros-pasos">Montarla</a> ·
+  <a href="#qué-hace">Qué hace</a> ·
+  <a href="#mando-web">Mando web</a> ·
+  <a href="#hardware">Hardware</a>
+</p>
+
+Enciendes y la pantalla se abre desde la línea del tubo. Suena la estática, aparece un canal y está a mitad de capítulo:
+lleva emitiendo desde antes de que llegaras. Cambias de canal y llegan el siseo, el destello y el número en pantalla.
+**No parece una lista de archivos. Parece una tele.**
+
+## Un vistazo
+
+<p align="center">
+  <img src="docs/img/case-front.jpg" width="42%" alt="Render de la carcasa tele90 v9, con cuatro teclas y carta de ajuste">
+  <img src="docs/img/remote-designs.gif" width="55%" alt="Recorrido animado por los cuatro diseños del mando web: clásico, negro, plata y gris">
+  <br><sub>Carcasa tele90 v9 · Cuatro diseños de mando para el móvil (animación hecha con los renders del proyecto).</sub>
+</p>
+
+La carcasa es un diseño propio para impresión 3D. Dentro lleva la [Freenove ESP32-S3 Display 2.8″](#hardware),
+una microSD, altavoz y batería. Puedes manejarla con sus botones, con palmadas en el firmware experimental o desde
+[el mando web](#mando-web) en la misma Wi-Fi.
 
 > [!NOTE]
-> El repositorio no contiene ni contendrá contenido protegido. Cada usuario convierte sus capítulos y los copia a su
-> microSD. Las imágenes de este README son material propio del proyecto: renders de la carcasa, la intro y el vídeo
-> del canal 0.
+> El repositorio no contiene contenido de series o películas. Cada usuario convierte sus propios vídeos y los copia
+> a la microSD. La intro, las imágenes y la animación de mandos de esta página son material del proyecto.
 
 ## Qué hace
 
