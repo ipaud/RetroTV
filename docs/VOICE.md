@@ -1,10 +1,22 @@
 # RETROTV Voice
 
 Una capa **opcional, local y offline** para escuchar con el micrófono de la placa. RETROTV sigue siendo una tele:
-la voz solo añade otra forma de dar las mismas órdenes que los botones. No es un asistente, no habla, no usa
-Internet y **no guarda audio**.
+la voz solo añade otra forma de dar las mismas órdenes que los botones. No es un asistente, no habla y no usa
+Internet.
+
+**Qué pasa con el sonido de la sala:**
+- **Las palmadas no graban nada.** El detector mira cada trozo de 11,6 ms, calcula su nivel y lo descarta. No se
+  guarda ni se envía audio: solo quedan números (niveles en dB, cuántas palmadas) en el log.
+- **La grabadora sí guarda audio,** pero solo cuando tú la pones en marcha: sale **● REC** en pantalla, graba
+  como mucho 15 s y lo guarda como archivo WAV en la microSD de la tele (`/retrotv/voice/messages/`). No sale de
+  la tele, y no se puede empezar una grabación desde la red ni desde el mando web.
+- Sin el firmware `voice`, el micrófono ni siquiera se activa.
 
 ## Estado
+
+Las etiquetas v0.1–v0.4 de esta página son **fases de la capa de voz**, no versiones de RETROTV: el firmware sigue
+siendo la 0.2.0-alpha2 (`PAUTV_VERSION` en `include/config.h`). "Probado" quiere decir comprobado en la placa del
+usuario, con su sala y su voz; el detalle de cada prueba está en [TEST_PLAN.md](TEST_PLAN.md).
 
 | Función | Estado | Notas |
 |---|---|---|
@@ -14,38 +26,47 @@ Internet y **no guarda audio**.
 | Detector de palmadas | **implementado, probado** | 43 secuencias reales en el log; ver calibración |
 | Doble palmada → apagar a STANDBY VOZ | **implementado, probado** | antes silenciaba; el usuario prefiere encender y apagar con dos |
 | Triple palmada → canal siguiente | **implementado, probado** | |
-| Ajustes AJUSTES → VOZ | implementado | MICROFONO, PALMADAS, SENSIBLE, en NVS |
+| Ajustes AJUSTES → VOZ | **implementado, probado** | MICROFONO, PALMADAS, SENSIBLE, APAGADO, LED ESCUCHA y GRABAR MENSAJE, en NVS; recorridos por serie (sin teclas montadas) |
 | Descartar el sonido de la propia tele | **implementado, probado** | envolvente del programa por encima de 400 Hz |
-| Falsos positivos con la tele sonando | **mejorado, sin cerrar** | 30 min: 1 doble falsa (corregida y comprobada con esa escena); falta una prueba larga |
+| Falsos positivos con la tele sonando | **probado con una escena, sin validar en general** | 30 min con un capítulo concreto al 75 %: 0 dobles (2026-10-03). No se ha probado con otros programas, volúmenes ni salas |
 | STANDBY VOZ: cada palmada = destello del piloto | **implementado, probado** (v0.2) | |
-| STANDBY VOZ: dos palmadas con silencio alrededor = encender | **implementado, probado** | la primera versión se encendía con ruidos de casa; falta una prueba larga |
-| Selector APAGADO: STANDBY VOZ / AHORRO MAX | implementado (v0.2) | por defecto AHORRO MAX, como siempre |
+| STANDBY VOZ: dos palmadas con silencio alrededor = encender | **implementado, probado** | la primera versión se encendía con ruidos de casa; no es infalible (ver más abajo) |
+| Selector APAGADO: STANDBY VOZ / AHORRO MAX | **implementado, probado** (v0.2) | por defecto AHORRO MAX; las dos ramas probadas en la placa (TV9, TV13) |
 | Consumo de STANDBY VOZ | **estimado ~40 mA** (30–50) | una noche: 72 → 64 % en ~6 h; ~3 días desde llena. Falta un medidor |
-| Falsos encendidos en standby | sin medir | |
+| Falsos encendidos en standby | **sin medir con log** | una sesión corta: 5 golpes sueltos sin encender; una noche (~6 h) en STANDBY VOZ sin encenderse, deducido de la batería (sin log) |
 | Grabadora (GRABADORA, 3-2-1, ● REC, WAV 16 kHz) | **implementada, probada** con la voz del usuario (v0.3) | se guarda subida al nivel de voz; la voz llega floja al micro, mejor a 20–30 cm |
 | Canal MENSAJES | **implementado, probado** (v0.3) | el micro oyó los mensajes por el altavoz, en orden y en bucle |
 | Wake word, comandos offline (ESP-SR) | **investigado, bloqueado** (fase M) | ver "Wake word y comandos" |
-| "HEY RETRO" | **no existe** | un modelo propio exige el servicio de pago de Espressif |
+| "HEY RETRO" | **no implementado** | un modelo propio exige el servicio de pago de Espressif |
+| Comandos de voz | **no implementados** | MultiNet no tiene español |
 
 ## Cómo se activa
 
-El firmware normal **no lleva nada de esto** (se compila igual que antes). La versión con voz:
+Hay dos compilaciones (`platformio.ini`):
 
-```bash
-pio run -e voice -t upload     # = -DPAUTV_VOICE_ENABLED=1
-```
-
-Cada parte se puede quitar por separado con su flag (`include/config.h`):
-
-| Flag | Por defecto | Qué hace |
+| Entorno | Cómo | Qué trae |
 |---|---|---|
-| `PAUTV_VOICE_ENABLED` | 0 (1 en `-e voice`) | la capa entera |
-| `PAUTV_MIC_ENABLED` | = VOICE | I2S RX, micrófono del códec, VU, MIC TEST |
-| `PAUTV_CLAP_ENABLED` | = MIC | detector y órdenes por palmadas |
-| `PAUTV_CLAP_WAKE_ENABLED` | 0 | encender con palmadas (v0.2) |
-| `PAUTV_WAKEWORD_ENABLED` | 0 | wake word (v0.4) |
-| `PAUTV_VOICE_COMMANDS_ENABLED` | 0 | comandos de voz (v0.4) |
-| `PAUTV_RECORDER_ENABLED` | 0 | grabadora (v0.3) |
+| `pautv` (el normal, por defecto) | `pio run -t upload` | Nada de voz: el micrófono, el I2S de entrada, las palmadas y la grabadora no se compilan. Un canal MENSAJES enseña SIN VOZ |
+| `voice` | `pio run -e voice -t upload` | Lo mismo más `-DPAUTV_VOICE_ENABLED=1`: micrófono, VU, palmadas, STANDBY VOZ, grabadora y canal MENSAJES |
+
+Las flags de `include/config.h` **heredan** de la de arriba: encender `PAUTV_VOICE_ENABLED` enciende las demás,
+salvo la palabra de activación y los comandos, que no existen.
+
+| Flag | Valor si no se define | En `pautv` | En `voice` | Qué hace |
+|---|---|---|---|---|
+| `PAUTV_VOICE_ENABLED` | 0 | 0 | 1 | la capa entera |
+| `PAUTV_MIC_ENABLED` | = `PAUTV_VOICE_ENABLED` | 0 | 1 | I2S RX, micrófono del códec, VU, MIC TEST |
+| `PAUTV_CLAP_ENABLED` | = `PAUTV_MIC_ENABLED` | 0 | 1 | detector y órdenes por palmadas |
+| `PAUTV_CLAP_WAKE_ENABLED` | = `PAUTV_CLAP_ENABLED` | 0 | 1 | apagar a STANDBY VOZ y encender con palmadas (sin ella, la doble silencia) |
+| `PAUTV_RECORDER_ENABLED` | = `PAUTV_MIC_ENABLED` | 0 | 1 | grabadora y borrado de mensajes |
+| `PAUTV_WAKEWORD_ENABLED` | 0 | 0 | 0 | reservada: "HEY RETRO" no está implementado |
+| `PAUTV_VOICE_COMMANDS_ENABLED` | 0 | 0 | 0 | reservada: los comandos de voz no están implementados |
+
+Cada parte se puede quitar por separado añadiendo su flag a 0 en `build_flags` del entorno `voice` (por ejemplo
+`-DPAUTV_RECORDER_ENABLED=0` deja palmadas sin grabadora). Compilado y comprobado (2026-10-03): `voice` sin
+grabadora, sin encender con palmadas y sin palmadas. Una combinación imposible (palmadas sin micrófono, encender con
+palmadas sin palmadas, grabadora sin micrófono) para la compilación con un `#error`, y también
+poner a 1 las dos reservadas, para que nadie crea que activó algo que no existe.
 
 Dentro de la versión con voz, **AJUSTES → VOZ** enciende y apaga el micrófono y las palmadas sin recompilar.
 
@@ -169,11 +190,17 @@ animado, picos −14 a −24 dBFS); no hacen nada porque una sola palmada no es 
 | + envolvente del programa | 30 min | 1 doble | 168 | la canción de la intro (caja sobre bajo) |
 | + envolvente por encima de 400 Hz | esa intro desde 0:00 (`T !ruta`), 2 min | 0 | 9 | — |
 | + brillo 18 % (la doble ya apaga) | esa intro desde 0:00, 3 min 50 s | 0 (1 suelta) | 26 sordos, 3–18 % | — |
-| la misma versión, prueba larga | el capítulo entero desde 0:00 y su vuelta, 30 min | 0 (3 sueltas) | 146 sordos, 3–18 % | — |
+| la misma versión, 30 min | el capítulo entero desde 0:00 y su vuelta, 30 min | 0 (3 sueltas) | 146 sordos, 3–18 % | — |
 
-La prueba larga (30 min, 2026-10-03) no dio ninguna doble ni apagado. Las 3 sueltas eran golpes del programa de
+La prueba de 30 min (2026-10-03) no dio ninguna doble ni apagado. Las 3 sueltas eran golpes del programa de
 28–38 % de agudos cuya subida en el programa (6,6–7,5 dB) quedó justo bajo los 8 dB del descarte; los sordos llegaron
 al 18 %, en el límite. Si aparece una doble falsa, el log dirá con qué brillo y con qué subida del programa.
+
+**Qué demuestra y qué no.** Todas estas pruebas son **la misma escena** (un capítulo con peleas y una intro de
+hip-hop, al 75 %, en la misma sala, con el mismo micrófono). Dicen que esa escena, que antes fallaba, ya no apaga la
+tele. No son una validación prolongada: faltan otros programas (música, deportes, directos), otros volúmenes, otras
+salas y muchas horas de uso normal. El margen es pequeño (sordos hasta 18 %, límite 18 %; subidas del programa de
+7,5 dB, límite 8 dB), así que **una doble falsa sigue siendo posible**, y ahora apaga la tele en vez de silenciarla.
 
 ## STANDBY VOZ (v0.2)
 
@@ -197,8 +224,11 @@ siempre a STANDBY VOZ:
   **−36 dBFS** o más (cerca de la tele) y **silencio alrededor**: ningún golpe en los 2,5 s anteriores ni en los
   ~1,2 s posteriores (la ventana de 0,7 s más 0,5 s de espera). Los ruidos de casa suelen venir en grupo; una persona
   da las palmadas tras un momento de silencio. El piloto destella con cada palmada que oye
-  (`voice/VoiceStandby.h`, con tests). Puede quedar algún falso encendido de dos golpes aislados que suenen a
-  palmada; si molesta, AHORRO MAX lo quita.
+  (`voice/VoiceStandby.h`, con tests). **No es infalible:** dos golpes aislados que suenen como palmadas, con
+  silencio alrededor, la encienden igual, y unas palmadas flojas, lejos o justo después de otro ruido no la
+  encienden. Probado: 5 golpes sueltos que no la encendieron y la doble del usuario que sí, en una sesión corta;
+  y una noche sin encenderse sola (deducido de la batería, sin log). Si los falsos encendidos molestan, AHORRO MAX
+  los quita (pero entonces solo enciende una tecla).
 - Historia: la primera versión encendía con el segundo golpe al momento, y el usuario vio que cualquier golpe,
   alarma o ruido la encendía. La segunda exigía una doble comprobada (ritmo, fuerza, brillo); paró la mayoría,
   pero un ruido de casa dio una pareja que pasaba todas las comprobaciones (−13/−17 dB, 52/66 % de agudos, más
@@ -213,7 +243,8 @@ siempre a STANDBY VOZ:
 
 **Grabar** (solo a propósito y con **● REC** en pantalla):
 
-1. **AJUSTES → VOZ → GRABAR MENSAJE** (VOL+), o serie `R`. Cuando la carcasa tenga teclas, también CH− + VOL−.
+1. **AJUSTES → VOZ → GRABAR MENSAJE** (VOL+), o serie `R`. No hay atajo de teclas (una combinación como CH− + VOL−
+   está pensada, pero **no implementada**).
    A propósito **no hay botón en el mando web**: no pide PIN, y cualquiera en la misma Wi-Fi podría grabar la sala.
 2. **GRABADORA** · 3 · 2 · 1 (una tecla aquí cancela sin grabar nada).
 3. **● REC 00:05 / 00:15** con una barra roja hasta el límite de 15 s. Cualquier tecla para.
@@ -278,8 +309,10 @@ mensajes.
 - **MICROFONO:** AJUSTES → DIAGNOSTICO → **CH−**. Barra VU segmentada (−60 a 0 dB, verde, amarillo, rojo, con
   el pico retenido 1 s en blanco), RMS, PEAK, recortes, errores de lectura y la última secuencia oída. MENU
   (mantener CH+) vuelve.
-- **AJUSTES → VOZ:** MICROFONO ON/OFF (pausa la captura), PALMADAS ON/OFF, SENSIBLE 0–100 de 10 en 10.
-- **Serie** (115200, compilación con `PAUTV_DEBUG_STATS`): `v` = MIC TEST, 10 s de
+- **AJUSTES → VOZ:** MICROFONO ON/OFF (pausa la captura), PALMADAS ON/OFF, SENSIBLE 0–100 de 10 en 10, APAGADO
+  (AHORRO MAX o STANDBY VOZ), LED ESCUCHA ON/OFF (el destello en STANDBY VOZ) y GRABAR MENSAJE.
+- **Serie** (115200, compilación con `PAUTV_DEBUG_STATS`): `R` = grabar (o parar), `Y` = mensaje sintético, `E` =
+  borrar los mensajes, `q` = apagar, `W` = encender desde STANDBY VOZ; `v` = MIC TEST, 10 s de
   `[MIC] rms=… peak=… clip=… overrun=… | clap floor=… thr=… claps=… long=… own=…`; `V` = pausa o reanuda la
   captura (para medir su coste). Cada secuencia deja `[CLAP] double (gap 296 ms, peak -11.3 dB, floor -58.3 dB,
   tv rise 2.1 dB) in PLAYING`. Sin botones, los menús se recorren por serie con `M` (menú), `n`/`p` (CH) y
@@ -288,8 +321,8 @@ mensajes.
 
 ## Privacidad
 
-- RETROTV **no almacena ni envía audio** por su cuenta. Cada bloque de 11,6 ms se mide y se sobrescribe; solo salen
-  niveles en dB y el número de palmadas.
+- RETROTV **no almacena ni envía audio** por su cuenta: ni para las palmadas, ni en STANDBY VOZ. Cada bloque de
+  11,6 ms se mide y se sobrescribe; solo salen niveles en dB y el número de palmadas.
 - **Lo único que se guarda** son los mensajes de la grabadora: a petición, con **● REC** en pantalla, como mucho
   15 s, y solo en la SD de la tele. No hay forma de empezar una grabación desde la red.
 - Todo es local: ni nube, ni servicios de reconocimiento.
@@ -301,9 +334,10 @@ mensajes.
   (no), eco a 50 ms (ignorado), doble y triple, la doble espera a que cierre la ventana, dos golpes a 160 ms (no es
   doble), secuencia lenta = dos sueltas, la segunda palmada no se pierde por la cola de la primera, fondo
   dinámico en una sala ruidosa, sensibilidad, margen extra con sonido, sonidos propios suprimidos, vuelta de
-  `millis()`.
-- **En la placa:** TV1–TV18 en [TEST_PLAN.md](TEST_PLAN.md), sección *RETROTV Voice*. Nada se marca OK solo
-  porque compile.
+  `millis()`; golpes sordos, parejas desiguales o lentas, alarmas, la envolvente del programa; STANDBY VOZ (silencio
+  antes y después); grabadora (remuestreo, nivel de voz, cabecera WAV, nombres, flujo 3-2-1/REC).
+- **En la placa:** TV1–TV20 (y TV7b, TV13c) en [TEST_PLAN.md](TEST_PLAN.md), sección *RETROTV Voice*. Nada se
+  marca OK solo porque compile.
 
 ## Un fallo encontrado por el camino
 
@@ -318,7 +352,9 @@ a −76 dB con un capítulo en marcha. Ahora `AudioManager::begin` quita el sile
   el umbral queda casi en 0 dBFS. Bajar el margen ahora que existe el descarte por envolvente es la siguiente
   calibración.
 - Una palmada real que coincide con una subida fuerte del programa se descarta (hay que repetirla).
-- Falta una prueba larga de falsos positivos con la versión final.
+- Falsos positivos: 30 min sin fallos con una escena concreta; falta una validación larga con otros programas,
+  volúmenes y salas. En STANDBY VOZ, falta medir los falsos encendidos con log durante horas.
+- Consumo de STANDBY VOZ estimado (~40 mA), no medido con un medidor.
 - El micrófono cuesta 16 KB de heap interno; con todo lo demás quedan ~70 KB libres (bloque mayor 61 KB).
-- Wake word y comandos dependen de ESP-SR, cuya compatibilidad con espressif32 6.9.0 / Arduino 2.0.17 no se ha
-  comprobado. Si exigiera migrar de framework, no se hará sin permiso.
+- "HEY RETRO" y los comandos de voz **no están implementados**: dependen de ESP-SR, que no viene en Arduino 2.0.17 y
+  exige cambiar el sistema de compilación (ver la investigación de arriba). No se hará sin permiso.

@@ -10,3 +10,4 @@ server/config/channels.json
 .pytest_cache/
 
 include/title_tags.h
+dist/

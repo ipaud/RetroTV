@@ -87,20 +87,23 @@ constexpr long PAUTV_VALID_EPOCH = 1700000000;  // earlier = clock never set by 
 #ifndef PAUTV_MIC_ENABLED  // I2S RX + the codec's microphone input, the VU meter, MIC TEST
 #define PAUTV_MIC_ENABLED PAUTV_VOICE_ENABLED
 #endif
-#ifndef PAUTV_CLAP_ENABLED  // double clap = mute, triple clap = next channel
+#ifndef PAUTV_CLAP_ENABLED  // double clap = off to voice standby (mute without CLAP_WAKE), triple = next channel
 #define PAUTV_CLAP_ENABLED PAUTV_MIC_ENABLED
 #endif
-#ifndef PAUTV_CLAP_WAKE_ENABLED  // voice standby: two claps turn the TV on (AJUSTES > VOZ > APAGADO)
+#ifndef PAUTV_CLAP_WAKE_ENABLED  // voice standby: two claps turn the TV off and on (AJUSTES > VOZ > APAGADO)
 #define PAUTV_CLAP_WAKE_ENABLED PAUTV_CLAP_ENABLED
 #endif
-#ifndef PAUTV_WAKEWORD_ENABLED  // "HEY RETRO" (v0.4+, needs ESP-SR)
+#ifndef PAUTV_WAKEWORD_ENABLED  // reserved: "HEY RETRO" is not implemented (needs ESP-SR)
 #define PAUTV_WAKEWORD_ENABLED 0
 #endif
-#ifndef PAUTV_VOICE_COMMANDS_ENABLED  // offline commands (v0.4)
+#ifndef PAUTV_VOICE_COMMANDS_ENABLED  // reserved: offline voice commands are not implemented
 #define PAUTV_VOICE_COMMANDS_ENABLED 0
 #endif
 #ifndef PAUTV_RECORDER_ENABLED  // short WAV messages, only with REC on screen (AJUSTES > VOZ)
 #define PAUTV_RECORDER_ENABLED PAUTV_MIC_ENABLED
+#endif
+#if PAUTV_WAKEWORD_ENABLED || PAUTV_VOICE_COMMANDS_ENABLED
+#error "HEY RETRO and voice commands are not implemented yet (docs/VOICE.md)"
 #endif
 #if PAUTV_CLAP_ENABLED && !PAUTV_MIC_ENABLED
 #error "PAUTV_CLAP_ENABLED needs PAUTV_MIC_ENABLED"

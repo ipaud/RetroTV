@@ -50,8 +50,8 @@ static void testPairingLimits() {
 
 static void testBodies() {
   char ssid[33], pass[65];
-  const char* add = R"({"ssid": "Vera_200461", "password": "secret12"})";
-  CHECK(parseWifiAdd(add, strlen(add), ssid, pass) && strcmp(ssid, "Vera_200461") == 0 && strcmp(pass, "secret12") == 0);
+  const char* add = R"({"ssid": "Oficina-2G", "password": "secret12"})";
+  CHECK(parseWifiAdd(add, strlen(add), ssid, pass) && strcmp(ssid, "Oficina-2G") == 0 && strcmp(pass, "secret12") == 0);
   const char* shortPass = R"({"ssid": "x", "password": "1234567"})";
   CHECK(!parseWifiAdd(shortPass, strlen(shortPass), ssid, pass));
   const char* open = R"({"ssid": "cafe"})";

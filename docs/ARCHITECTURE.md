@@ -1,4 +1,4 @@
-# Arquitectura — RETROTV v0.2.0-alpha2 (V0.1 + en emisión + teletexto + canales por red + directo HLS/3Cat)
+# Arquitectura — RETROTV v0.2.0-alpha2 (V0.1 + en emisión + teletexto + canales por red + directo HLS/3Cat + voz opcional)
 
 Cómo está construido el firmware y por qué. Los pines están en [HARDWARE.md](HARDWARE.md) y las pruebas en
 [TEST_PLAN.md](TEST_PLAN.md).
@@ -72,6 +72,13 @@ Cómo está construido el firmware y por qué. Los pines están en [HARDWARE.md]
 | `video` | 0 | 2 | Lee de la SD (o de la red), acompasa, decodifica JPEG | Lejos del audio. Convive con Wi-Fi/lwIP (prio 18–23). `vTaskDelay(1)` por fotograma para que IDLE0 alimente el watchdog, que **no se desactiva** |
 | `net` | 0 | 3 | Canales remotos: DNS/mDNS, sesión, dos sockets → anillos | Toda la espera de red vive aquí, nunca en el loop ni en el audio. Duerme 1 tick por vuelta: IDLE0 y el decodificador siempre tienen el core |
 | `httpd` | 0 | 3 | Mando web (`src/web/`): la página (un solo HTML con sus cuatro diseños, que solo cambian el CSS), `/api/state`, `/api/channels`, `/api/guide`, `/api/logo` (cada logo en color, negro y blanco, leído a PSRAM al arrancar) y las órdenes a una cola que vacía el loop. Los ajustes (`/api/config/`) también pasan al loop, que es el dueño de la SD, la Wi-Fi y NVS; el servidor espera su respuesta hasta 6 s | Por debajo de todo lo que reproduce. Una petición son unos cientos de bytes; nunca toca el reproductor ni la pantalla. Como mucho 5 sockets, y cada respuesta cierra su conexión |
+
+Solo en el firmware `voice` ([VOICE.md](VOICE.md)):
+
+| Tarea | Core | Prio | Qué hace | Por qué ahí |
+|---|---|---|---|---|
+| `mic` | 1 | 4 | Lee el I2S RX (micrófono del ES8311), mide niveles, detecta palmadas y, solo con ● REC, remuestrea a 16 kHz | Por encima de la pantalla, cuyos fotogramas de 38 ms vaciarían el colchón de RX, y por debajo del audio |
+| `msgplay` | 1 | 5 | Reproduce los mensajes del canal MENSAJES | Solo existe con ese canal en pantalla, en el sitio de `media-audio` (parada entonces) |
 
 El reparto está comentado en `include/config.h` (`*_TASK_CORE`, `*_TASK_PRIO`).
 
@@ -453,6 +460,7 @@ Medido con un capítulo real (640x480 4:3, 23 min):
 | Nivel | Qué | Cómo |
 |---|---|---|
 | Ordenador | Clics, gestos, ejes, curva de volumen, sintetizador, separador MJPEG, reloj A/V, decisión de fotograma, filtro de capítulos, `channels.json`, nombres ASCII, recorte del OSD, índice y posición en emisión, filas, títulos, orden de páginas y guía del teletexto | `tools/run_host_tests.sh` (ASan + UBSan). Se comprobó que cada test detecta al menos una mutación de su lógica |
+| Ordenador (voz) | Niveles, detector de palmadas (golpes sordos, ritmo, alarmas, envolvente del programa), standby por voz, grabadora (remuestreo, nivel, WAV) | Igual, en `test/voice_tests.cpp` |
 | Ordenador (red) | URLs de canal remoto, JSON de sesión, cabeceras HTTP, chunked en cualquier corte, anillo con la vuelta de uint32, lectura con espera (datos, fin, cancelación, atasco), reintentos | Igual, en `test/remote_tests.cpp` |
 | Servidor | API, sesiones (caducidad, límite), índice y, contra un uvicorn real con sockets: mismo segundo para vídeo y audio, bucle, cierre al colgar, apagado con streams abiertos | `cd server && .venv/bin/python -m pytest` |
 | Herramientas | Demo, conversor (16:9, 4:3, anamórfico, acentos, `._*`, `PISTA`) | ffprobe + análisis de fotogramas ([TEST_PLAN.md](TEST_PLAN.md)) |
@@ -469,6 +477,7 @@ Medido con un capítulo real (640x480 4:3, 23 min):
 | V0.2e | Provider Tunarr |
 | V0.2 estable | Canales locales y remotos sin diferencia para quien mira |
 | V0.3 | EPG y metadatos (el teletexto ya calcula la guía local), canales FAST |
+| Voz | Palmadas, STANDBY VOZ, grabadora y MENSAJES (**hecho**, firmware `voice`). "HEY RETRO" y comandos de voz: **no implementados**, en pausa (necesitan ESP-SR, ver [VOICE.md](VOICE.md)) |
 
 Pendiente de la V0.2 en la tele: líneas de red en la pantalla de diagnóstico (SERVER, CHANNEL, NET RATE, RECONNECTS,
 BUFFER, A/V DRIFT). El margen de dibujo se resolvió con vídeo local a 20 fps (80 MHz estropea la imagen).

@@ -35,3 +35,4 @@ trap 'rm -rf "$out_dir"' EXIT
 
 "$out_dir/host_tests"
 python3 tools/make_index.py --self-test
+python3 tools/make_dist.py --self-test

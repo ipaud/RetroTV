@@ -36,7 +36,7 @@ La copia revisada corresponde a su último commit, del 2026-08-10. Los pines del
 | Conector FPC del táctil (P1) | RST, INT, SDA, SCL, VDD, GND | S9 |
 | LED RGB | WS2812 (XL-5050RGBC) en GPIO42 | S2, S8, S9 |
 | Botón BOOT | GPIO0, pull-up de 10K (R10), LOW al pulsar | S2, S8, S9 |
-| Batería | ADC en GPIO9, divisor 200K/200K → V = mV × 2; cargador TP4054 (~290 mA reales) | S3, S8, S9 |
+| Batería | ADC en GPIO9, divisor 200K/200K → V = mV × 2; cargador TP4054, ~300 mA nominales (R_PROG 3,3 kΩ; corriente no medida) | S3, S8, S9 |
 | Conector de expansión | 4 pines de 1.25 mm: GPIO2, GPIO3, GPIO14, GPIO21. **Sin GND ni 3V3. Sin pull-ups** | S8, S9 |
 | USB-C | USB nativo del S3 (GPIO19/20), sin puente USB-serie → `ARDUINO_USB_CDC_ON_BOOT=1` | S8, S9 |
 | Chip y memoria | **ESP32-S3R8** (8 MB de PSRAM OPI integrada) + flash 25VQ128 (16 MB, QSPI) | S8, S9 |
@@ -91,39 +91,76 @@ esos tres valores. No se guardan en NVS porque ninguna pantalla los modifica.
 
 ## Pines de arranque (strapping) y avisos
 
-- **GPIO0 (BOOT):** si el mando de CANAL está conectado a BOOT y se mantiene pulsado al encender, la placa entra en modo
-  descarga. No pulses CANAL mientras la enciendes.
+- **GPIO0 (BOOT):** mantener BOOT pulsado al encender o al enchufar mete la placa en modo descarga. Ninguna tecla de
+  la carcasa va a GPIO0.
 - **GPIO45 (retroiluminación) y GPIO46 (DC del LCD):** son pines de arranque. El firmware solo los usa como salidas
   después del arranque.
-- **GPIO3:** es pin de arranque (fuente de JTAG) y no se usa.
+- **GPIO3 (tecla CH+):** es pin de arranque (fuente de JTAG). Tenerlo pulsado al encender solo cambia de dónde sale el
+  JTAG, que la tele no usa.
 
 ## Integración física en la carcasa
 
-- **Carcasa tele90 v5** (modelo en Blender, no incluido): 4 teclas, LED de 3 mm, altavoz 40×28 en el
-  techo, USB-C por el lateral derecho, microSD con alargador en la base trasera y una LiPo 103665 detrás de la placa.
+**Carcasa vigente: tele90 v9**, diseño propio modelado en Blender por script. Mide **92,5 × 85 × 59 mm** (ancho ×
+alto × fondo, sin las patas) según su modelo. Los archivos del modelo **no están en este repositorio** y la carcasa no
+se distribuye como imprimible hasta publicar sus STL revisados.
+
+- **Piezas:** frontal, cuerpo y tapa trasera, 4 teclas, soporte de pulsadores y 4 patas.
+- **Dentro:** la placa tras la ventana, el altavoz de 40×28 mm bajo la rejilla del techo y la LiPo **detrás de la placa**,
+  en el cuerpo.
+- **Por fuera:** 4 teclas con su símbolo grabado, LED de 3 mm (piloto) y USB-C directo por el lateral derecho.
+- **Versiones anteriores** (v5 y las de 97 y 112 mm de fondo): superadas. Sus cotas, la ventana de pantalla, la posición
+  de la batería y el alargador de microSD **no valen para la v9**.
+
+Cableado (el mismo en cualquier carcasa):
+
 - **Teclas:** pulsadores de 6x6 mm a GND, de izquierda a derecha CH− GPIO2, CH+ GPIO3, VOL− GPIO14, VOL+ GPIO21 (los
   cuatro pines del conector de expansión). Se leen con `INPUT_PULLUP` interno (~45K): el conector no tiene pull-ups.
 - **LED:** TXD del conector UART (GPIO43, libre porque el log va por USB) con ~1K en serie.
 - El conector de expansión no tiene GND. Sácalo del conector I2C (3V3, GND, IO15, IO16) o del UART (RXD, TXD, GND, 5V).
-- **microSD con alargador:** un cable alarga las pistas de 40 MHz. La tele se recupera sola de los timeouts
-  (`App::recoverSd`), pero con la carcasa montada hay que repetir la prueba `D … scan` (T18.2) y, si falla mucho más, bajar
-  a 20 MHz.
-- Con la placa suelta, BOOT (GPIO0) hace de CH+ con clic, doble clic y mantener.
-- La pantalla queda hundida unos 7 mm tras una ventana de 55.5 × 41.5 mm, así que el táctil es incómodo en los bordes:
-  los mandos deben poder hacerlo todo.
+- Con la placa suelta, BOOT (GPIO0): clic = canal siguiente, doble clic = anterior, mantener = ajustes.
+- **Si se alarga la microSD** con un cable (el modelo v9 no describe ninguno), las pistas de 40 MHz se alargan: la tele se
+  recupera sola de los timeouts (`App::recoverSd`), pero hay que repetir la prueba `D … scan` (T18.2) y, si falla
+  mucho más, bajar a 20 MHz.
+
+## Batería
+
+| | Dato | Origen |
+|---|---|---|
+| Celda | **YUNIQUE 103665**, LiPo de una celda (1S), **3,7 V nominales**, **3000 mAh anunciados** por el vendedor | etiqueta / anuncio (capacidad no medida) |
+| Medidas | 10 × 36 × 65 mm (el nombre 103665) | formato estándar |
+| Conector | JST 1.25 de 2 pines; en la placa (JP1) pin 1 = BAT+ y pin 2 = GND | esquema S9 |
+| Carga | TP4054 de la placa, ~300 mA nominales (R_PROG 3,3 kΩ) | esquema S9 (no medida) |
+
+> [!WARNING]
+> **Comprueba la polaridad antes de conectar cualquier batería.** Las LiPo con JST 1.25 no siguen un estándar: el rojo
+> y el negro a veces vienen al revés. Al revés, el cargador y la placa se pueden dañar. Con un polímetro: el positivo
+> de la batería tiene que llegar al pin 1 (BAT+) de JP1.
+
+**Medido en la placa** (lecturas del ADC, `/api/state` o `[BOOT] battery`):
+- Recién llegada, sin USB: 61 % (~3,89 V), 2026-10-01.
+- Carga por el USB del Mac con la tele encendida: del 81 % al 99 % en unas 2 h 45 min; llena se queda en ~4,19 V
+  leídos, 2026-10-02.
+- Sin batería conectada, la lectura es la salida del cargador: ~4,1 V (~90 %).
+
+**Estimado, no medido:**
+- Carga completa de vacía a llena: unas 10–11 h (3000 mAh / ~300 mA).
+- Autonomía viendo la tele: unas 8–10 h, suponiendo ~0,3 A. Sin medir: `tools/battery_log.py` registra una descarga
+  completa por Wi-Fi.
+- STANDBY VOZ: ~40 mA (30–50), de una noche en standby (72 → 64 % en ~6 h): unos 3 días desde llena.
+- Reposo profundo (AHORRO MAX): sin medir.
+- El porcentaje sale de una curva genérica de LiPo (`src/power/Battery.h`), no de una descarga real de esta celda.
 
 ## Verificado en la placa del usuario (2026-09-29)
 
-- Chip ESP32-S3 rev v0.2, MAC 44:1b:f6:ce:69:24. USB-Serial-JTAG 303A:1001 en `/dev/cu.usbmodem101`.
+- Chip ESP32-S3 rev v0.2. USB-Serial-JTAG 303A:1001 en `/dev/cu.usbmodem101`.
 - PSRAM OPI detectada: 8189 KB.
 - LCD con Arduino_GFX, SPI a 40 MHz y rotación 1: horizontal correcto. El orden BGR y la inversión (IPS) están bien:
   el verde sale verde.
 - Flash física (ID JEDEC): 16384 KB.
 - Escaneo I2C: solo 0x18 (ES8311). 0x38 no responde, ni siquiera tras un pulso de reset en `CTP_RST` (GPIO18).
 - Batería sin LiPo conectada: 4094 mV. Es la salida del cargador TP4054, no una medida de batería.
-- LiPo real (2026-10-01): YUNIQUE 103665, 3,7 V 3000 mAh con JST 1.25, la del hueco de la tele90 v9. Conector JP1
-  del esquema: pin 1 = BAT+, pin 2 = GND. Recién llegada y sin USB, la tele funciona de la batería y marca 61 %
-  (~3,89 V). Carga a ~300 mA (R_PROG 3,3 kΩ): unas 10–11 h de vacía a llena.
+- LiPo real (2026-10-01): YUNIQUE 103665 (ver [Batería](#batería)). Recién llegada y sin USB, la tele funciona de la
+  batería y marca 61 % (~3,89 V).
 - Vídeo: 24,0 fps estables con un capítulo real. Decodificar (JPEGDEC con SIMD del S3) cuesta 13–25 ms por fotograma
   y dibujar por SPI a 40 MHz 38 ms, de un presupuesto de 41,7 ms: **el SPI es el cuello de botella** y deja
   ~4 ms de margen. A 80 MHz (`PAUTV_SPI_HZ`) dibujar baja a 22 ms pero la imagen sale mal (probado 2026-10-01):
@@ -134,7 +171,7 @@ esos tres valores. No se guardan en NVS porque ninguna pantalla los modifica.
 - Audio: el ES8311 arranca a 44.1 kHz con MCLK ×256, el SC8002B se activa con GPIO1 en LOW y el tono de 440 Hz suena
   limpio por el altavoz de 40×28 mm.
 - microSD Philips SDHC de 32 GB (29817 MB útiles) en FAT32/MBR: monta a 40 MHz en 4 bits.
-- Wi-Fi a 2.4 GHz (red DIGIFIBRA-UTC3), entre −53 y −57 dBm con la placa fuera de la carcasa. Conecta en 2,9–5,0 s;
+- Wi-Fi a 2.4 GHz (la red de casa), entre −53 y −57 dBm con la placa fuera de la carcasa. Conecta en 2,9–5,0 s;
   el primer arranque tras grabar superó los 6 s (calibración inicial de la radio), por eso el primer intento tiene
   un tope de 8 s.
 - **Variante confirmada: FNK0104A (sin táctil).** El conector FPC del táctil está vacío (comprobado a la vista) y 0x38
@@ -142,7 +179,13 @@ esos tres valores. No se guardan en NVS porque ninguna pantalla los modifica.
 
 ## Pendiente de verificar con la placa (REQUIRES HARDWARE TEST)
 
-- Pulsadores de CANAL (GPIO2) y VOLUMEN (GPIO14) cableados dentro de la carcasa. Hasta ahora solo se ha usado BOOT.
+- **Las cuatro teclas montadas** (GPIO2, 3, 14 y 21 a GND, T19.2) y encender con ellas desde el reposo (T22.3). Hasta
+  ahora se han usado BOOT, el mando web y el puerto serie; la lógica de las teclas solo está probada en el ordenador.
+- **El LED del frontal completo** (T19.3): encendido mientras funciona y apagado un instante con cada orden. En STANDBY
+  VOZ el usuario vio su destello (TV10).
 - Rango útil del volumen (`CODEC_VOLUME_MIN/MAX` = 45..85) con el altavoz montado detrás de la rejilla.
-- Curva del porcentaje (`power/Battery.h`, genérica) contra una descarga real, y autonomía (~0,3 A: unas 8–10 h).
+- Autonomía real y curva del porcentaje (`power/Battery.h`, genérica) con una descarga completa
+  (`tools/battery_log.py`); consumo con un medidor en reproducción, STANDBY VOZ y reposo (T22.4, TV12).
+- Batería agotada estando en STANDBY VOZ (TV13b).
+- Todo dentro de la carcasa v9 montada: Wi-Fi, temperatura y SD (las medidas de arriba son con la placa fuera).
 - Táctil y mapeo de ejes en rotación 1 y 3: solo con una FNK0104B.

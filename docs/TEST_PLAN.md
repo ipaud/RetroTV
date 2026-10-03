@@ -7,6 +7,31 @@ Leyenda:
 Registra el resultado de cada prueba (fecha, OK/FALLO y notas) en la columna "Resultado". No marques nada que
 no se haya comprobado.
 
+## Estado de la versión 0.2.0-alpha2 (revisión del 2026-10-03, FNK0104A)
+
+Resumen por funciones; el detalle y la fecha de cada prueba están en las tablas de abajo.
+
+| Función | Probado en el ordenador | Probado en la placa | Pendiente en hardware |
+|---|---|---|---|
+| Arranque, pantalla, intro, diagnóstico | compila sin warnings propios | arranque, LCD 320×240, colores, intro, diagnóstico (T1, T2, T20) | sin basura al encender (T1.5), rotación 3 (T1.9) |
+| Arrancar sin ordenador | — | con la batería y sin USB, tras una noche en STANDBY VOZ (T1.10) | con un cargador de pared |
+| microSD | — | FAT32 a 40 MHz, recuperación de timeouts (T18) | con la carcasa v9 montada |
+| Vídeo y audio local | separador MJPEG, reloj A/V, índice, en emisión | 20 fps sin descartes, audio sincronizado, zapeo con estática, OSD, NO SIGNAL | un capítulo completo de 23 min (T6.12), soak de 2 h (T9.6) |
+| Teletexto | filas, títulos, páginas, guía | por log y serie | mirarlo en la pantalla (T10.8) |
+| Canales por red y directos | protocolo, sesiones; servidor con `pytest` | remoto con `T`, SX3 en directo, NO SIGNAL y reintentos | desde `channels.json` en la SD (T11.15, T11.16, T12.11) |
+| Mando web y ajustes | API, emparejamiento, Wi-Fi, canales | mando, guía, logos, ajustes, varias redes Wi-Fi (T14, T15, T17) | — |
+| **Cuatro teclas de la carcasa** | lógica de pulsar y mantener (T19.1, T22.1) | — | **con los pulsadores montados** (T19.2) y encender con ellas (T22.3) |
+| BOOT con la placa suelta | — | clic, doble clic, mantener, encender desde el reposo (T3.4–T3.6, T22.3) | — |
+| LED del frontal | — | destello en STANDBY VOZ (TV10) | encendido y parpadeo con cada orden (T19.3) |
+| Reposo AHORRO MAX | lógica de apagado | apagar y encender con BOOT (T22.2, T22.3, TV13) | consumo (T22.4) |
+| Batería | curva, avisos, detección de carga | lecturas, carga del 81 al 99 % en ~2 h 45 min (T19.6) | descarga completa y autonomía real, avisos del 15 y 5 % con la LiPo, apagado por batería agotada |
+| Voz: micrófono, VU, palmadas | niveles, detector, golpes sordos, envolvente del programa | captura sin coste visible en el vídeo, VU, doble apaga, triple cambia de canal (TV1–TV7b) | — |
+| Voz: falsos positivos | escenarios sintéticos | 30 min sin dobles con **una** escena (TV8) | otros programas, volúmenes y salas durante horas |
+| STANDBY VOZ | silencio antes y después | encender con dos palmadas, destello (TV9–TV11); ~40 mA estimados (TV12) | consumo con medidor (TV12), falsos encendidos con log (TV13c), batería agotada (TV13b) |
+| Grabadora y MENSAJES | remuestreo, nivel de voz, WAV, flujo | grabar con la voz del usuario, reproducir, borrar (TV16, TV17) | — |
+| "HEY RETRO" y comandos de voz | — | — | **no implementados** (TV14, TV15) |
+| Táctil | gestos y ejes | — | solo con una FNK0104B (la unidad es una A) |
+
 ## Resumen: criterios de fin de la V0.1 (2026-09-29, FNK0104A)
 
 | Criterio | Estado | Pruebas |
@@ -34,9 +59,11 @@ no se haya comprobado.
    y arrancar con uno como último canal (T11.16). Mirar el audio catalán y la sincronía en SX3.
 3. **Soak largo:** `S300` durante 2 h o más, comparando la primera y la última línea `[SOAK]` (T9.6).
 4. **Un capítulo completo** de 23 min sin interrupciones (T6.12), dejando un canal hasta que cambie de capítulo.
-5. **Cablear el mando de VOLUMEN** (GPIO14 a GND): elegir en los ajustes, el brillo y afinar la curva 45..85 con el
-   altavoz montado (T5.9, T7.13–T7.15). Volumen, silencio, su OSD y su memoria ya se probaron con los comandos serie.
-6. **Cablear el mando de CANAL** (GPIO2): T3.7.
+5. **Montar las cuatro teclas** (GPIO2, 3, 14 y 21 a GND, T19.2) y encender con ellas (T22.3); después, afinar la
+   curva de volumen 45..85 con el altavoz montado (T5.9, T7.13–T7.15). Volumen, silencio, su OSD y su memoria ya se
+   probaron con los comandos serie y el mando web. (Los antiguos mandos de CANAL y VOLUMEN, T3.7 y T3.8, se sustituyeron
+   por estas cuatro teclas.)
+6. **LED del frontal** (GPIO43, T19.3).
 7. **Arrancar con un `channels.json` roto** (T7.17) y ver la pantalla de error sin SD (T7.16, hasta ahora solo por log).
 8. **Rotación 3** (T1.9) y **arranque sin ordenador** (T1.10), ya dentro de la carcasa.
 9. ~~**SPI a 80 MHz**~~ probado 2026-10-01: la imagen sale mal. En su lugar, vídeo local a 20 fps (ver HARDWARE.md).
@@ -55,7 +82,7 @@ no se haya comprobado.
 | T1.7 | Secuencia de estados | Log + pantalla | BOOT (1.5 s) → DIAGNOSTICS (3 s) → HOME (1 s) → PLAYING (NO SIGNAL con estática tenue) | REQUIRES HARDWARE TEST | OK 2026-09-29 |
 | T1.8 | Colores | Mirar HOME | Marco y título verdes, texto blanco; ERROR con barra roja. Si sale azul, el orden es RGB/BGR | REQUIRES HARDWARE TEST | OK 2026-09-29 (verde correcto: BGR + inversión OK) |
 | T1.9 | Rotación 3 | `PAUTV_ROTATION = 3` en `config.h`, flashear | Imagen girada 180°, correcta | REQUIRES HARDWARE TEST | |
-| T1.10 | Sin USB | Alimentar con un cargador, sin ordenador | Arranca igual; el log no bloquea (`setTxTimeoutMs(0)`) | REQUIRES HARDWARE TEST | |
+| T1.10 | Sin USB | Alimentar con un cargador, sin ordenador | Arranca igual; el log no bloquea (`setTxTimeoutMs(0)`) | REQUIRES HARDWARE TEST | OK 2026-10-03 con la batería y sin USB: tras una noche en STANDBY VOZ, dos palmadas la reiniciaron y reprodujo un canal; respondía por `/api/state`. Con un cargador de pared, sin probar |
 
 ## Fase 2 — Diagnóstico y TEST CARD
 
@@ -82,8 +109,8 @@ TEST CARD. MENU abre el diagnóstico y otro MENU vuelve a la TEST CARD.
 | T3.4 | BOOT, un clic | Pulsar BOOT una vez en PLAYING | ~350 ms después: `[INPUT] CH_NEXT` y "CH_NEXT" en la TEST CARD | REQUIRES HARDWARE TEST | OK 2026-09-29 |
 | T3.5 | BOOT, doble clic | Dos pulsaciones rápidas | `[INPUT] CH_PREV`, sin CH_NEXT | REQUIRES HARDWARE TEST | OK 2026-09-29 |
 | T3.6 | BOOT, mantener | Mantener ≥1 s | `[INPUT] MENU` y se abre el diagnóstico; mantener otra vez vuelve a la TEST CARD | REQUIRES HARDWARE TEST | OK 2026-09-29 (MENU abre y cierra el diagnóstico) |
-| T3.7 | Mando CANAL (GPIO2) | Pulsador entre GPIO2 y GND | Igual que T3.4–T3.6 | REQUIRES HARDWARE TEST | |
-| T3.8 | Mando VOLUMEN (GPIO14) | Pulsador entre GPIO14 y GND | Clic `VOL_UP`, doble `VOL_DOWN`, mantener `MUTE` | REQUIRES HARDWARE TEST | |
+| T3.7 | Mando CANAL (GPIO2) | Pulsador entre GPIO2 y GND | Igual que T3.4–T3.6 | REQUIRES HARDWARE TEST | Sustituida por T19.2 (cuatro teclas) |
+| T3.8 | Mando VOLUMEN (GPIO14) | Pulsador entre GPIO14 y GND | Clic `VOL_UP`, doble `VOL_DOWN`, mantener `MUTE` | REQUIRES HARDWARE TEST | Sustituida por T19.2 (cuatro teclas) |
 | T3.9 | Gestos táctiles | Solo con una FNK0104B | Toque `TOGGLE_OSD`, deslizar izquierda o derecha `CH_PREV`/`CH_NEXT`, arriba o abajo `VOL_UP`/`VOL_DOWN`, mantener `MENU` | REQUIRES HARDWARE TEST | No aplica a la unidad del usuario |
 | T3.10 | Mapeo de ejes | FNK0104B: MENU → diagnóstico, dibujar con el dedo | El rastro verde sigue al dedo en rotación 1 y 3. Si no, ajustar `TOUCH_*` en `board_config.h` | REQUIRES HARDWARE TEST | No aplica a la unidad del usuario |
 
@@ -116,8 +143,8 @@ cambian el volumen guardado (VOLnn). Los dos aparecen en la TEST CARD y se guard
 | T5.4 | Pitido al entrar en el diagnóstico | Arrancar, o MENU desde la TEST CARD | Pitido corto de 1 kHz | REQUIRES HARDWARE TEST | OK 2026-09-29. Al 40 % sonaba flojo; subido al 70 % |
 | T5.5 | Tono de 440 Hz | En el diagnóstico: clic de VOLUMEN, un toque, o clic de BOOT/CANAL en una placa suelta | 1 s de tono limpio, sin zumbido ni distorsión | REQUIRES HARDWARE TEST | OK 2026-09-29 (al 90 %) |
 | T5.6 | Sin chasquido al arrancar | Escuchar al encender | El amplificador sigue apagado mientras se configura el códec | REQUIRES HARDWARE TEST | |
-| T5.7 | Volumen | Clic y doble clic de VOLUMEN en la TEST CARD | `[AUDIO] volume N (codec M)` y cambio audible por pasos de 5 | REQUIRES HARDWARE TEST | Necesita el mando de VOLUMEN |
-| T5.8 | Silencio | Mantener VOLUMEN | "MUTE" en la TEST CARD; el tono de prueba no se oye | REQUIRES HARDWARE TEST | Necesita el mando de VOLUMEN |
+| T5.7 | Volumen | Clic y doble clic de VOLUMEN en la TEST CARD | `[AUDIO] volume N (codec M)` y cambio audible por pasos de 5 | REQUIRES HARDWARE TEST | Con las teclas VOL (T19.2), pendiente; por serie y mando web, probado |
+| T5.8 | Silencio | Mantener VOLUMEN | "MUTE" en la TEST CARD; el tono de prueba no se oye | REQUIRES HARDWARE TEST | Con las teclas VOL (T19.2), pendiente; por serie y mando web, probado |
 | T5.9 | Afinar la curva 45..85 | Con un capítulo real (fase 6) | Volumen 100 sin saturar y volumen 1 aún audible | REQUIRES HARDWARE TEST | |
 
 ## Fase 6 — Reproducción local
@@ -154,7 +181,7 @@ Hasta que existan los canales de verdad (fase 7) hay tres canales provisionales:
 | T7.8 | Canal desactivado | Del 09 al siguiente | Salta el 10 (disabled) y vuelve al 01 | REQUIRES HARDWARE TEST | OK 2026-09-29 |
 | T7.9 | Tipo de V0.2 | Poner `"enabled": true` en el canal 10 | "NO SIGNAL" + "V0.2", sin salto automático | REQUIRES HARDWARE TEST | |
 | T7.10 | OSD sobre el vídeo | Mirar el OSD mientras hay vídeo | Se lee bien, no parpadea y el vídeo no lo pisa | REQUIRES HARDWARE TEST | OK 2026-09-29 (usuario) |
-| T7.11 | OSD de volumen | Clic o doble clic de VOLUMEN | `VOL NN` + barra de 20 segmentos durante 1 s; mantener VOLUMEN: `MUTE` fijo mientras dura el silencio | REQUIRES HARDWARE TEST | Necesita el mando de VOLUMEN |
+| T7.11 | OSD de volumen | Clic o doble clic de VOLUMEN | `VOL NN` + barra de 20 segmentos durante 1 s; mantener VOLUMEN: `MUTE` fijo mientras dura el silencio | REQUIRES HARDWARE TEST | Con las teclas VOL (T19.2), pendiente; por serie y mando web, probado |
 | T7.12 | OSD fijo | Un toque (solo en la B) | La info del canal queda fija y la hora se actualiza cada minuto; otro toque la quita | REQUIRES HARDWARE TEST | No aplica a la unidad del usuario |
 | T7.13 | Menú de ajustes | Mantener CANAL | `AJUSTES`: clic mueve, VOLUMEN elige o sube, doble VOLUMEN baja, mantener CANAL sale y vuelve al canal | REQUIRES HARDWARE TEST | Abrir, mover y salir OK 2026-09-29; elegir necesita VOLUMEN |
 | T7.14 | Brillo | Ajustes → BRILLO, VOLUMEN ± | 10–100 % en pasos de 10, al momento; se conserva tras un reset | REQUIRES HARDWARE TEST | |
@@ -294,7 +321,7 @@ la que tenga a su alcance.
 | T14.3 | Arranque en otra red | Casa + oficina en `secrets.h`, arrancar en la oficina | Escanea, elige la de la oficina sin probar antes la de casa, conecta | REQUIRES HARDWARE TEST | OK 2026-09-30, dos arranques: 14 y 21 redes vistas en 3,0 y 3,6 s, la oficina a −49/−51 dBm en el canal 6, conectada en 1,6 y 3,3 s. Encontrado y arreglado: (1) el escaneo asíncrono lanzado nada más encender la Wi-Fi no terminaba nunca y dejaba la siguiente conexión fallando como "wrong password?"; ahora espera a que la estación esté arrancada y, si un escaneo se atasca, lo para. (2) Con 120 ms por canal, el core daba el escaneo por fallido a los 2,4 s; ahora 300 ms (hasta 6 s) |
 | T14.4 | Red de 5 GHz | Añadir la variante `_5G` de la oficina | El escaneo (2.4 GHz) no la ve; se prueba la última y da "network not visible" | REQUIRES HARDWARE TEST | OK 2026-09-30 (en los arranques con el escaneo atascado, antes del arreglo) |
 | T14.5 | Una sola red | Solo la de casa, en casa | Sin escaneo, como antes | REQUIRES HARDWARE TEST | Pendiente (el camino no cambió; probar al volver a casa) |
-| T14.6 | Cambio de sitio | Encender en casa y luego en la oficina sin tocar nada | Conecta en cada sitio a su red | REQUIRES HARDWARE TEST | OK 2026-09-30: de la oficina (Vera_200461) a casa sin tocar nada: la búsqueda vio DIGIFIBRA-UTC3 (dos puntos de acceso, −56 dBm, canal 2) y conectó. Los canales en directo fallaban: el servidor del Mac seguía anunciando `retrotv-server.local` con la IP de la oficina. Arreglado: el anuncio sigue los cambios de dirección (cada 15 s) |
+| T14.6 | Cambio de sitio | Encender en casa y luego en la oficina sin tocar nada | Conecta en cada sitio a su red | REQUIRES HARDWARE TEST | OK 2026-09-30: de la oficina a casa sin tocar nada: la búsqueda vio la red de casa (dos puntos de acceso, −56 dBm, canal 2) y conectó. Los canales en directo fallaban: el servidor del Mac seguía anunciando `retrotv-server.local` con la IP de la oficina. Arreglado: el anuncio sigue los cambios de dirección (cada 15 s) |
 
 ## Mando a distancia web
 
@@ -359,10 +386,10 @@ reproductor, mientras la Wi-Fi recibe y/o busca redes cada 10 s; cada fallo vuel
 |---|---|---|---|---|---|
 | T19.1 | Lógica de las teclas | `tools/run_host_tests.sh` | Pulsar actúa al soltar, sin esperar el doble clic; dos pulsaciones son dos órdenes; mantener actúa una vez; CH+ mantenida = ajustes, VOL− mantenida = silencio | HOST | OK 2026-09-30: 489 checks |
 | T19.2 | Teclas en la placa | Pulsadores entre GPIO2/3/14/21 y GND | `[INPUT] CH_PREV`, `CH_NEXT`, `VOL_DOWN`, `VOL_UP`; mantener CH+ `MENU`, mantener VOL− `MUTE` | REQUIRES HARDWARE TEST | Pendiente de cablear |
-| T19.3 | LED | LED + 1K en GPIO43 | Encendido; se apaga un instante con cada orden (teclas y mando web) | REQUIRES HARDWARE TEST | Pendiente de cablear |
+| T19.3 | LED | LED + 1K en GPIO43 | Encendido; se apaga un instante con cada orden (teclas y mando web) | REQUIRES HARDWARE TEST | Pendiente. En STANDBY VOZ el usuario vio su destello (TV10) |
 | T19.5 | Batería: lógica | `tools/run_host_tests.sh` | Curva LiPo monótona, 3825 mV = 50 %; un aviso al pasar a baja y otro a crítica, ninguno con lecturas que oscilan en el 15 %; baja al arrancar también avisa; JSON `battery` / `battery_low` | HOST | OK 2026-09-30: 504 checks |
 | T19.6 | Batería en la placa | Sin LiPo, con USB | `[BOOT] battery ~4.1 V`, `/api/state` con `battery` ~90 y `battery_low: false`; pila en la barra del canal | REQUIRES HARDWARE TEST | OK 2026-09-30: 4136 mV, `battery: 92`; la pila en la barra del canal, vista por el usuario. Con la LiPo: comprobar el porcentaje, el aviso al 15 % y la carga |
-| T19.4 | microSD con alargador | `D 1200 … scan` con la carcasa montada | Timeouts recuperados; comparar con T18.2 (22 en 20 min) | REQUIRES HARDWARE TEST | Pendiente de montar |
+| T19.4 | microSD con alargador | `D 1200 … scan` con la carcasa montada | Timeouts recuperados; comparar con T18.2 (22 en 20 min) | REQUIRES HARDWARE TEST | Solo si se monta un alargador (era de la v5; el modelo v9 no describe ninguno) |
 
 ## Vídeo al encender
 
@@ -401,7 +428,7 @@ reproductor, mientras la Wi-Fi recibe y/o busca redes cada 10 s; cada fallo vuel
 | TV5 | Doble palmada | Viendo un canal | Apagado CRT y STANDBY VOZ; dos palmadas más la encienden | REQUIRES HARDWARE TEST | Antes silenciaba: OK 2026-10-02. Apagar: **FALLO** 2026-10-02 con el límite de brillo del 30 % (la segunda palmada de cada doble, 21–28 %, se descartaba como golpe sordo) → límite 18 %: OK 2026-10-02, la doble del usuario (384 ms, 22 %) la apagó y dos palmadas con 12 s de silencio antes la encendieron |
 | TV6 | Triple palmada | Viendo un canal | Canal siguiente, sin silenciar antes | REQUIRES HARDWARE TEST | OK 2026-10-02 |
 | TV7 | Palmadas con la tele sonando | Doble palmada con sonido | Funciona; los chasquidos propios no cuentan | REQUIRES HARDWARE TEST | OK con límites (2026-10-02): funciona con fondo de hasta ~−40 dB; con el programa muy alto (fondo −27 dB) hace falta una palmada muy fuerte. El chasquido al silenciar daba palmadas falsas (una doble a 161 ms, una triple a 144 ms): corregido (350 ms tras silenciar/volumen, 180 ms mínimos) |
-| TV8 | Falsos positivos 30 min, tele sonando | Canal con sonido, sin tocar nada | 0 dobles/triples | REQUIRES HARDWARE TEST | 2026-10-02, Samurai Champloo al 75 %: 1.ª versión, 1 doble falsa en 3 min (puñetazos a 624 ms) → descarte por la envolvente del programa; 2.ª versión, 30 min: 1 doble falsa (la canción de la intro: caja sobre bajo), 168 golpes propios descartados → envolvente medida por encima de 400 Hz; repetida solo esa intro desde 0:00 (`T !ruta`): 0 dobles, 9 golpes descartados. **Pendiente** una prueba larga completa con la versión final; límite de brillo 18 % (la doble apaga la tele): la misma intro desde 0:00 al 75 %, 3 min 50 s, 0 dobles, 1 palmada suelta, 26 golpes sordos (3–18 %), 20 fps sin pérdidas; prueba larga 2026-10-03: el capítulo entero y su vuelta, 30 min al 75 %: **0 dobles, 0 apagados**, 3 palmadas sueltas del programa (28–38 %), 146 golpes sordos (3–18 %), 20 fps, 0 fotogramas perdidos, sin reinicios |
+| TV8 | Falsos positivos 30 min, tele sonando | Canal con sonido, sin tocar nada | 0 dobles/triples | REQUIRES HARDWARE TEST | 2026-10-02, Samurai Champloo al 75 %: 1.ª versión, 1 doble falsa en 3 min (puñetazos a 624 ms) → descarte por la envolvente del programa; 2.ª versión, 30 min: 1 doble falsa (la canción de la intro: caja sobre bajo), 168 golpes propios descartados → envolvente medida por encima de 400 Hz; repetida solo esa intro desde 0:00 (`T !ruta`): 0 dobles, 9 golpes descartados. **Pendiente** una prueba larga completa con la versión final; límite de brillo 18 % (la doble apaga la tele): la misma intro desde 0:00 al 75 %, 3 min 50 s, 0 dobles, 1 palmada suelta, 26 golpes sordos (3–18 %), 20 fps sin pérdidas; prueba de 30 min 2026-10-03: el capítulo entero y su vuelta, 30 min al 75 %: **0 dobles, 0 apagados**, 3 palmadas sueltas del programa (28–38 %), 146 golpes sordos (3–18 %), 20 fps, 0 fotogramas perdidos, sin reinicios. Es **una escena**: falta validar con otros programas, volúmenes y salas durante horas |
 | TV9 | Standby por voz | AJUSTES → VOZ → APAGADO = STANDBY VOZ; ⏻ en el mando web (o serie `q`) | Apagado CRT; pantalla, retroiluminación, piloto, altavoz y Wi-Fi apagados; `[STANDBY] voice standby: listening` | REQUIRES HARDWARE TEST | OK 2026-10-02: por serie y por el usuario; serie `W` despierta (prueba sin teclas) |
 | TV10 | Una palmada en standby → LED | Una palmada a 0,5–1 m | Destello del piloto (120 ms); sigue apagada | REQUIRES HARDWARE TEST | OK 2026-10-02: dos palmadas sueltas, destello visto por el usuario, la tele siguió apagada. El micro funciona con la CPU a 80 MHz |
 | TV11 | Palmadas en standby → encender | Silencio, dos palmadas, silencio | Se enciende ~1,2 s después: intro, último canal, volumen guardado | REQUIRES HARDWARE TEST | 1.ª versión (dos golpes, al momento): OK 3 de 3, pero los ruidos también la encendían (TV13c). 3.ª versión (dos palmadas comprobadas, 2,5 s de silencio antes y 1,2 s después): OK 2026-10-02, encendió con la doble del usuario (2,7 s de silencio antes) tras 5 golpes sueltos que no la encendieron; el usuario la dio por buena |
@@ -409,7 +436,7 @@ reproductor, mientras la Wi-Fi recibe y/o busca redes cada 10 s; cada fallo vuel
 | TV13 | Apagado AHORRO MÁXIMO (deep sleep) | APAGADO = AHORRO MAX (por defecto) | Igual que siempre (T22) | REQUIRES HARDWARE TEST | Mismo código que T22 tras separarlo en `powerDown()` + `deepSleep()`; sin volver a probar en la placa; OK 2026-10-03: con APAGADO = AHORRO MAX, ⏻ (serie `q`) → apagado CRT, `sleeping until a key is pressed`, el USB se suelta; BOOT la despierta: intro, CH10, volumen 60 |
 | TV13b | Standby por voz con la batería agotada | — | Deep sleep, no se queda escuchando | REQUIRES HARDWARE TEST | Lógica en el código (`battery_.empty()` en el bucle); sin probar |
 | TV7b | Golpes en la mesa con la tele encendida | Nudillos en la mesa, sueltos | Ninguno cuenta como palmada | REQUIRES HARDWARE TEST | OK 2026-10-02 (límite 18 %): 14 golpes sordos medidos entre 4 y 15 % de agudos, todos descartados; 4 golpes sueltos muy agudos (66–91 %) contaron como palmada suelta, sin efecto; ninguna doble |
-| TV13c | Falsos encendidos en standby | STANDBY VOZ con golpes, alarmas y ruidos de casa | No se enciende | REQUIRES HARDWARE TEST | **FALLO** 2026-10-02 (1.ª versión): "se enciende con cualquier golpe, alarma o ruido" (usuario). 2.ª versión (doble comprobada: ritmo, fuerza, brillo, −36 dBFS), probada: paró golpes, una pareja desigual y sueltos, pero **un ruido de casa la encendió** (pareja −13/−17 dB, 52/66 % de agudos). 3.ª versión: además, 2,5 s sin golpes antes y ~1,2 s después (la pareja falsa llegó 1,6 s tras otro golpe); el usuario descartó las tres palmadas. Probada en una sesión corta: 5 ruidos sueltos, ningún encendido. Falta una prueba larga con ruidos de casa |
+| TV13c | Falsos encendidos en standby | STANDBY VOZ con golpes, alarmas y ruidos de casa | No se enciende | REQUIRES HARDWARE TEST | **FALLO** 2026-10-02 (1.ª versión): "se enciende con cualquier golpe, alarma o ruido" (usuario). 2.ª versión (doble comprobada: ritmo, fuerza, brillo, −36 dBFS), probada: paró golpes, una pareja desigual y sueltos, pero **un ruido de casa la encendió** (pareja −13/−17 dB, 52/66 % de agudos). 3.ª versión: además, 2,5 s sin golpes antes y ~1,2 s después (la pareja falsa llegó 1,6 s tras otro golpe); el usuario descartó las tres palmadas. Probada en una sesión corta: 5 ruidos sueltos, ningún encendido. Falta una prueba larga con ruidos de casa. 2026-10-03: una noche (~6 h) en STANDBY VOZ sin encenderse sola, deducido de la batería (72 → 64 %), sin log |
 | TV14 | Wake word | — | — | REQUIRES HARDWARE TEST | Bloqueado: ESP-SR no está en Arduino 2.0.17; integrarlo cambia el sistema de compilación (sin permiso, no). Ver docs/VOICE.md |
 | TV15 | Comandos de voz | — | — | REQUIRES HARDWARE TEST | Bloqueado: MultiNet no tiene español; ver docs/VOICE.md |
 | TV16 | Grabadora | AJUSTES → VOZ → GRABAR MENSAJE (o serie `R`), hablar, una tecla | 3-2-1, ● REC con barra, MENSAJE GUARDADO #N; el WAV suena en MENSAJES | REQUIRES HARDWARE TEST | Parcial 2026-10-02: guardado probado con mensajes sintéticos (serie `Y`): `msg_0001…0005.wav`, números seguidos, ~1,2–1,5 s por 2 s; la pantalla 3-2-1 se abre y una tecla la cancela. **Pendiente** grabar de verdad con el micro (el usuario no estaba: no se grabó la sala sin él); 2026-10-02 con el usuario: msg_0006 grabado y guardado (15 s, 1,3 s) pero **no se oía** al reproducirlo (los ding-dong sí) → subida a pico −3 dBFS: msg_0007 (pico −23,6 dBFS, +20,5 dB) se oía "muy bajo" → paso alto de 300 Hz + voz a −14 dBFS (máx. +36 dB) + limitador: msg_0008 (voz −56,5 dBFS, +36 dB, el tope) "se oye mejor" al 70 % de volumen; **OK 2026-10-02**, el usuario lo da por bueno. La voz llega muy floja al micro: más cerca (20–30 cm) se oiría mejor; el tope de +36 dB se queda |

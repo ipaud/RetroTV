@@ -45,9 +45,11 @@ su número en pantalla. **No parece un reproductor de archivos: parece una tele.
   la tele.
 - 📱 **Mando web.** `http://retrotv.local` en el móvil: canales, volumen, lista con logos, guía y ajustes, sin app ni
   nube. Cuatro diseños de mandos de época, que se cambian deslizando el dedo. Un canal enseña un QR para abrirlo.
-- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: dos palmadas la apagan y dos más la encienden
-  (STANDBY VOZ), tres cambian de canal. Una grabadora de mensajes de 15 s y un canal MENSAJES que los
-  pone. Todo en la tele, sin Internet; solo graba con ● REC en pantalla ([docs/VOICE.md](docs/VOICE.md)).
+- 👏 **Palmadas y mensajes (experimental).** Con el firmware `voice`: dos palmadas la apagan y dos más, con silencio
+  alrededor, la encienden (STANDBY VOZ); tres cambian de canal. No es infalible: algún golpe puede colarse y alguna
+  palmada floja no contar. Una grabadora de mensajes de 15 s y un canal MENSAJES que los pone. Todo en la tele, sin
+  Internet. Las palmadas no graban nada; la grabadora guarda un WAV en la microSD solo cuando la pones en marcha, con
+  ● REC en pantalla ([docs/VOICE.md](docs/VOICE.md)). "HEY RETRO" y los comandos de voz **no están implementados**.
 - 🔋 **Portátil.** LiPo de 3000 mAh dentro, aviso en pantalla, reposo profundo (también solo, con la batería
   agotada) y encendido con cualquier tecla.
 
@@ -114,17 +116,21 @@ Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Placa:** [Freenove ESP32-S3 Display 2.8"](https://github.com/Freenove/Freenove_ESP32_S3_Display), FNK0104A (sin
   táctil) o FNK0104B (táctil). Es un ESP32-S3R8 con 8 MB de PSRAM, 16 MB de flash, pantalla ILI9341, códec ES8311,
   ranura microSD y cargador de LiPo. Pines verificados en [docs/HARDWARE.md](docs/HARDWARE.md).
-- **Carcasa:** tele90, diseño propio, modelado en Blender por script. La versión final, la v9, mide 92,5 × 85 × 59 mm.
-  Tiene frontal, cuerpo y tapa trasera, que cierran con 12 imanes, sin tornillos, y la placa va sujeta sobre pivotes.
-  Por fuera, cuatro teclas con su símbolo grabado, piloto rojo y USB-C directo en el lateral. Dentro van el altavoz,
-  bajo la rejilla del techo, y la LiPo, detrás de la placa. Se imprime en PLA o PETG, con patas de TPU: unas 7 h y
-  ~100 g. Solo el cuerpo lleva soportes, por dentro. Los archivos de la carcasa no están en este repositorio.
+- **Batería:** LiPo **YUNIQUE 103665**, una celda (1S), 3,7 V nominales y 3000 mAh anunciados, con JST 1.25.
+  **Comprueba la polaridad antes de conectar cualquier otra:** pin 1 = BAT+ ([docs/HARDWARE.md](docs/HARDWARE.md#batería)).
+- **Carcasa:** tele90 **v9**, la vigente, diseño propio modelado en Blender por script. Según su modelo mide
+  92,5 × 85 × 59 mm (sin las patas). Tiene frontal, cuerpo y tapa trasera, que cierran con 12 imanes, sin tornillos,
+  y la placa va sujeta sobre pivotes. Por fuera, cuatro teclas con su símbolo grabado, piloto rojo y USB-C directo en
+  el lateral. Dentro van el altavoz, bajo la rejilla del techo, y la LiPo, detrás de la placa. Está pensada para PLA o
+  PETG con patas de TPU (unas 7 h y ~100 g). **Los archivos de la carcasa no están en este repositorio** y aún no se
+  publican como imprimibles. Las carcasas anteriores (v5 y las de 97 y 112 mm de fondo) quedan superadas: sus cotas y
+  la posición de su batería no valen para la v9.
 
 <p align="center">
   <img src="docs/img/case-back.jpg" width="60%" alt="Render de la tele90 v9 por detrás: rejillas, USB-C en el lateral y la pegatina con el QR del mando">
 </p>
 
-**Cableado de la carcasa (tele90):**
+**Cableado de la carcasa (tele90 v9):**
 - Cada tecla empuja un pulsador de 6×6 mm conectado entre su GPIO y GND: CH− **GPIO2**, CH+ **GPIO3**, VOL− **GPIO14**,
   VOL+ **GPIO21**, los cuatro pines del conector de expansión de 1.25 mm.
   - Ese conector no tiene GND: sácalo del conector I2C (3V3, GND, IO15, IO16) o del UART.
@@ -138,7 +144,8 @@ Más detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 1. **Tarjeta.** Formatea una microSD en **FAT32 con esquema MBR**. En la Utilidad de Discos de macOS: "MS-DOS (FAT)"
    con "Registro de arranque principal".
-2. **Firmware.** Conecta la placa por USB-C y ejecuta `platformio run --target upload`.
+2. **Firmware.** Conecta la placa por USB-C y ejecuta `platformio run --target upload` (el normal). La versión con
+   micrófono, palmadas y grabadora es `platformio run -e voice --target upload` ([docs/VOICE.md](docs/VOICE.md)).
 3. **Capítulos.** Con la SD en el ordenador:
    `tools/convert_video.sh ~/Videos/MiSerie /retrotv/media/channel01 /Volumes/RETROTV`.
    Opcional: `tools/make_demo_clip.sh /Volumes/RETROTV` para el clip de demo.
@@ -170,7 +177,9 @@ Si dice `No serial data received`, basta con repetirlo.
 Los eventos son los mismos venga de donde venga la orden. El táctil solo se activa si al arrancar responde en 0x38
 (FNK0104B).
 
-Las cuatro teclas de la carcasa, de izquierda a derecha (actúan al soltar, sin esperas):
+Las cuatro teclas de la carcasa, de izquierda a derecha (actúan al soltar, sin esperas). **Estado:** su lógica está
+probada en el ordenador (T19.1), pero **todavía no con los pulsadores montados en la placa** (T19.2, T22.3). En la
+placa se han probado BOOT, el mando web y el puerto serie, que dan las mismas órdenes.
 
 | Tecla | Pulsar | Mantener 1 s |
 |---|---|---|
@@ -179,7 +188,7 @@ Las cuatro teclas de la carcasa, de izquierda a derecha (actúan al soltar, sin 
 | VOL− (GPIO14) | Volumen − | Silencio |
 | VOL+ (GPIO21) | Volumen + | Volumen + |
 
-Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, mantener = ajustes.
+Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, mantener = ajustes (probado en la placa).
 
 | Táctil | Toque | ← | → | ↑ | ↓ | Mantener 0.8 s |
 |---|---|---|---|---|---|---|
@@ -188,11 +197,13 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
 - **Encender y apagar** (con batería): mantener **CH− 2 s** (o ⏻ en el mando web) apaga la tele: la imagen se recoge
   en la línea del CRT, se apagan pantalla, sonido, Wi-Fi y LED, y el chip se duerme. **Cualquier tecla** (o BOOT) la
   vuelve a encender: arranque normal, con la intro y el último canal. Dormida no tiene Wi-Fi: el mando web no la
-  enciende. La tecla con la que se enciende no cuenta como orden.
+  enciende. La tecla con la que se enciende no cuenta como orden. Probado en la placa con el mando web, el puerto
+  serie y BOOT; con las teclas montadas, pendiente.
 - **Batería:** la barra del canal enseña una pila con el porcentaje junto a la Wi-Fi, y el mando web `BAT 78%`. Al
   bajar del 15 % sale "BATERIA / QUEDA POCA CARGA" y al 5 % "CONECTA EL USB-C" (una vez por nivel). Se carga por el
-  USB-C de la placa (TP4054, ~300 mA: una LiPo 103665 de 3000 mAh tarda unas 10–11 h); enchufada, la tele funciona
-  del cable y la batería solo carga. Sin batería conectada la lectura es la salida del cargador y enseña ~90 %.
+  USB-C de la placa (TP4054, ~300 mA nominales: unas 10–11 h estimadas de vacía a llena); enchufada, la tele funciona
+  del cable y la batería solo carga. Sin batería conectada la lectura es la salida del cargador y enseña ~90 %. El
+  porcentaje sale de una curva genérica de LiPo, no de una descarga medida de esta celda.
 - **Cargando:** al enchufar el USB-C sale "CARGANDO / BATERIA 78%" y, mientras carga, la pila de la barra se ve verde
   con un rayo amarillo; el mando web pone `CARGANDO 78% ⚡`. La placa no tiene ningún pin que diga si hay cable: la tele
   lo deduce del salto de ~100 mV que da la lectura al enchufar o desenchufar y, si se encendió ya enchufada, de que la
@@ -201,16 +212,20 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
   hora la tensión apenas sube (el cargador mantiene la tensión y baja la corriente) y se queda en ~4,19 V leídos: ahí ya
   está llena. Si la tele se reinicia enchufada con la batería casi llena, puede no marcar CARGANDO, porque la tensión ya
   no sube.
+- **Autonomía (estimada, sin medidor):** viendo la tele, unas 8–10 h suponiendo ~0,3 A, sin medir todavía
+  (`tools/battery_log.py` registra una descarga completa). En STANDBY VOZ, unos 40 mA (30–50), deducidos de una noche
+  en standby: unos 3 días desde llena.
 - **Batería agotada:** si se queda en el 2 % (~3,42 V) durante unos 30 s, sale "BATERIA / AGOTADA: SE APAGA" y la
   tele pasa a reposo, para no vaciar la celda. Al encenderla con la batería aún agotada se vuelve a apagar; con el
   USB-C enchufado, no.
 - **Conector:** JST 1.25 de 2 pines, pin 1 = BAT+ y pin 2 = GND. Comprueba la polaridad de la batería antes de
   enchufarla: en las baratas el rojo y el negro a veces vienen al revés.
 - **LED del frontal** (GPIO43): encendido mientras la tele funciona; se apaga un instante con cada orden (teclas,
-  mando web, táctil), como el piloto de una tele de los 90.
+  mando web, táctil), como el piloto de una tele de los 90. Pendiente de probar entero con el LED montado (T19.3).
 - **Teletexto:** en ese canal no hay sonido, así que VOLUMEN + / − (o un toque) pasa de página.
 - **Ajustes:** CH−/CH+ mueven la selección, VOL+ elige o sube, VOL− baja, y mantener CH+ sale. Las opciones son WI-FI
-  (estado y reintentar), BRILLO (10–100 %), VOLUMEN, DIAGNOSTICO y REINICIAR.
+  (estado y reintentar), BRILLO (10–100 %), VOLUMEN, DIAGNOSTICO y REINICIAR; con el firmware `voice`, también VOZ
+  (micrófono, palmadas, sensibilidad, APAGADO, LED ESCUCHA y GRABAR MENSAJE).
 
 ## Mando web
 
@@ -524,8 +539,10 @@ Con `PAUTV_DEBUG_STATS 1` (en `config.h`), cada 5 s durante la reproducción se 
 de dibujo, `av_drift_ms`, `dropped_frames`, desbordamientos, KB/s de la SD, heap, PSRAM y las marcas de vida de las
 tareas. Abrir el puerto reinicia la placa. Además acepta estos comandos por el monitor serie:
 
-- `n` / `p`: canal siguiente / anterior. `+` / `-`: volumen. `x`: silencio. `o`: OSD fijo. `M`: menú.
-  Hacen lo mismo que los mandos.
+- `n` / `p`: canal siguiente / anterior. `+` / `-`: volumen. `x`: silencio. `o`: OSD fijo. `M`: menú. `q`: apagar
+  (= mantener CH−). Hacen lo mismo que los mandos.
+- Con el firmware `voice`: `v` (niveles del micrófono), `V` (pausa la captura), `R` (grabar), `Y` (mensaje de
+  prueba), `E` (borrar los mensajes) y `W` (encender desde STANDBY VOZ). Detalle en [docs/VOICE.md](docs/VOICE.md).
 - `d`: *dithering* sí/no, para compararlo (sale en pantalla "DITHER ON/OFF"). Por defecto, apagado.
 - `w`: enseña el aviso de batería, para verlo sin gastarla.
 - `m`: foto de la memoria (heap, mínimo, bloque más grande, PSRAM).
@@ -612,8 +629,9 @@ SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 
 Son 658 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
-bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi y batería), compiladas con clang, ASan y UBSan, más el autotest de `make_index.py`. No hace
-falta la placa. ArduinoJson se toma de `.pio/libdeps` y, si falta, se descarga con `pio pkg install`.
+bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi, batería y voz: niveles, palmadas, standby por
+voz y grabadora), compiladas con clang, ASan y UBSan, más los autotests de `make_index.py` y `make_dist.py`. No hace falta la placa.
+ArduinoJson se toma de `.pio/libdeps` y, si falta, se descarga con `pio pkg install`.
 
 Nuestro código compila con `-Wall -Wextra -Werror`. ArduinoJson entra con `-isystem`, y los dos falsos positivos que
 GCC aún encuentra dentro de la librería (`maybe-uninitialized` y `aggressive-loop-optimizations`, tras el inlining)
@@ -624,10 +642,25 @@ El servidor tiene sus propios tests (`pytest`, ver [server/README.md](server/REA
 </details>
 
 <details>
+<summary><b>Paquete del código para compartir</b></summary>
+
+```sh
+tools/make_dist.py            # dist/retrotv-<versión>-<commit>.zip con lo que hay en HEAD
+```
+
+Sale de `git archive`, así que solo lleva archivos que Git sigue: nunca `include/secrets.h`, `include/title_tags.h`,
+`.pio`, entornos virtuales, cachés, `server/media`, la configuración local del servidor ni `.git`. Después revisa el
+ZIP por nombres y rutas (vídeo, audio, índices, carcasas, temporales) y comprueba que ningún texto de tu
+`include/secrets.h` aparece dentro, sin escribirlo en pantalla. Si algo falla, borra el ZIP y lo dice. Lleva
+`include/secrets.example.h` para configurar la Wi-Fi. Los cambios sin commit no entran: haz commit antes.
+
+</details>
+
+<details>
 <summary><b>Estructura del código</b></summary>
 
 ```
-platformio.ini          entorno "pautv" (espressif32@6.9.0, gnu++17, -Wall -Wextra en src/)
+platformio.ini          entornos "pautv" (el normal) y "voice" (+ micrófono): espressif32@6.9.0, gnu++17, -Wall -Wextra en src/
 include/config.h        ajustes de la app: tiempos, rotación, SPI, audio, vídeo, tareas y prioridades, PAUTV_DEBUG_STATS
 include/board_config.h  pines verificados (fuentes en docs/HARDWARE.md) y ejes del táctil
 include/app_types.h     estados, eventos de entrada, macro de log con prefijo
@@ -646,13 +679,14 @@ src/teletext/           Teletext: filas, títulos y orden de páginas (C++ puro)
 src/settings/           SettingsStore: volumen, último canal y brillo en NVS con escritura diferida
 src/power/              Battery: lectura, porcentaje y avisos
 src/diagnostics/        Diagnostics: PSRAM, flash y heap en ejecución, escaneo I2C, batería y LED de estado
+src/voice/              RETROTV Voice (solo con -e voice): captura del micrófono, palmadas, standby por voz, grabadora y canal MENSAJES
 lib/es8311/             driver ES8311 de Espressif, copiado sin modificar del sketch 07.1 de Freenove
 tools/                  convert_video.sh, make_index.py, make_logo.py, make_remote_sticker.py, make_demo_clip.sh, make_test_fixtures.sh,
-                        run_host_tests.sh, device_tests.py, remote_device_tests.py, stream_profiles.py, battery_log.py
-test/                   tests en el ordenador (host, channel, overlay, onair, teletext, remote, web, config, wifi y battery_tests.cpp)
+                        run_host_tests.sh, device_tests.py, remote_device_tests.py, stream_profiles.py, battery_log.py, make_dist.py
+test/                   tests en el ordenador (host, channel, overlay, onair, teletext, remote, web, config, wifi, battery y voice_tests.cpp)
 server/                 RETROTV Server (Python + FastAPI): canales por red y directos (FFmpeg, HLS, 3Cat, RTVE, Pluto TV); ver server/README.md
 data/example-config/    channels.json y wifi.example.json de ejemplo
-docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVIDERS; img/ con las imágenes de este README
+docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVIDERS, VOICE; img/ con las imágenes de este README
 ```
 
 </details>
@@ -662,12 +696,14 @@ docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVI
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): capas, tareas y prioridades, dueño único de la pantalla, pipeline de
   vídeo y audio, reloj A/V, máquina de estados y por qué MJPEG + AAC.
 - [docs/HARDWARE.md](docs/HARDWARE.md): pines verificados con su fuente, conflictos entre fuentes, cómo distinguir la
-  variante A de la B y lo medido en la placa (SPI, SD, vídeo).
+  variante A de la B, la carcasa tele90 v9, la batería (lo medido y lo estimado) y lo medido en la placa (SPI, SD,
+  vídeo).
 - [docs/TEST_PLAN.md](docs/TEST_PLAN.md): pruebas por fase con su resultado y la prueba de estabilidad de 100 cambios
   de canal. Lo que aún falta comprobar en la placa está marcado como REQUIRES HARDWARE TEST.
 - [docs/NETWORK_TUNING.md](docs/NETWORK_TUNING.md): medidas de Wi-Fi y de los directos (caudal, cortes, perfiles).
-- [docs/VOICE.md](docs/VOICE.md): RETROTV Voice, la capa opcional de micrófono y palmadas: arquitectura, calibración
-  con palmadas reales, privacidad, medidas y lo que falta (standby por palmadas, grabadora, wake word).
+- [docs/VOICE.md](docs/VOICE.md): RETROTV Voice, la capa opcional de micrófono: palmadas, standby por voz, grabadora y
+  canal MENSAJES; flags, calibración con palmadas reales, privacidad, medidas y lo que falta ("HEY RETRO" y comandos
+  de voz, sin implementar).
 - [docs/PROVIDERS.md](docs/PROVIDERS.md): fuentes de los canales del servidor, canales investigados y sus límites.
 - [server/README.md](server/README.md): RETROTV Server, su API y cómo montarlo en un NAS.
 
@@ -685,6 +721,6 @@ docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVI
 - **arduino-libhelix es GPL-3.0.** Si en el futuro se distribuye el binario del firmware a terceros, habrá que revisar
   las obligaciones de GPL o sustituir el decodificador AAC. Para uso personal no hay ningún problema.
 - **Código de RETROTV:** licencia MIT ([LICENSE](LICENSE)).
-- **Carcasa:** tele90, diseño propio.
+- **Carcasa:** tele90 v9, diseño propio; sus archivos no están en este repositorio.
 - **Contenido:** series, películas, logos de canales y directos son de sus dueños y no forman parte del proyecto.
   El repo no incluye ni enlaza vídeos: cada uno pone en la SD los suyos o los que tenga derecho a usar.
