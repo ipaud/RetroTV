@@ -1,0 +1,127 @@
+# Checks every pull request and every push to main without a board: host tests, server tests and the builds.
+# Nothing here flashes a board. What each job checks and what stays manual: docs/DEVELOPMENT.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PLATFORMIO_VERSION: "6.1.19"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  host-tests:
+    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
+    if: github.repository == 'ipaud/RetroTV'
+    name: Host tests (C++ with clang + sanitizers, tool self-tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install PlatformIO
+        run: pip install "platformio==${PLATFORMIO_VERSION}"
+      - name: Fetch ArduinoJson (only that library, the version in platformio.ini)
+        run: |
+          spec=$(grep -o 'bblanchon/ArduinoJson@[^[:space:]]*' platformio.ini)
+          pio pkg install -e pautv -l "$spec" --no-save
+      - name: Run the host tests and the self-tests
+        # GCC 13 (this runner's g++) stops on two format-truncation warnings in the tests; clang is what they use.
+        run: |
+          command -v clang++ >/dev/null || { sudo apt-get update && sudo apt-get install -y clang; }
+          CXX=clang++ tools/run_host_tests.sh
+
+  server-tests:
+    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
+    if: github.repository == 'ipaud/RetroTV'
+    name: Server tests (pytest, real FFmpeg)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: server/requirements*.txt
+      - name: Install FFmpeg (the HLS and transcoding tests use the real one)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install the server and test dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run pytest
+        run: python -m pytest -rs
+
+  firmware:
+    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
+    if: github.repository == 'ipaud/RetroTV'
+    name: Firmware (${{ matrix.env }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [pautv, voice, voice_nokeys, voice_ww, voice_nokeys_ww]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Only the download caches (PlatformIO's advice): the toolchains are ~2 GB (Arduino) and ~4 GB (ESP-IDF),
+      # most of the 10 GB a repository gets; they are downloaded on every run instead.
+      - name: Cache pip and PlatformIO downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: pio-downloads-${{ runner.os }}-${{ env.PLATFORMIO_VERSION }}
+      - name: Install PlatformIO
+        run: pip install "platformio==${PLATFORMIO_VERSION}"
+      - name: Build ${{ matrix.env }}
+        run: pio run -e "${{ matrix.env }}"
+      - name: The standby app's partition table is still the firmware's
+        # tools/standby_flash.sh writes app1 and the model at the offsets of standby/partitions.csv.
+        if: matrix.env == 'voice_nokeys_ww'
+        run: cmp standby/partitions.csv ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/default_16MB.csv
+
+  standby:
+    # Only in the public repository: elsewhere (forks, private copies) it would spend that account's minutes.
+    if: github.repository == 'ipaud/RetroTV'
+    name: Standby app (ESP-IDF 5.4.1, without the «Hey Retro» model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Only the download caches (PlatformIO's advice): the toolchains are ~2 GB (Arduino) and ~4 GB (ESP-IDF),
+      # most of the 10 GB a repository gets; they are downloaded on every run instead.
+      - name: Cache pip and PlatformIO downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: pio-downloads-${{ runner.os }}-${{ env.PLATFORMIO_VERSION }}
+      - name: Install PlatformIO
+        run: pip install "platformio==${PLATFORMIO_VERSION}"
+      - name: Build the standby app as any clone gets it (no personal model)
+        run: |
+          test ! -e standby/models/heyretro.tflite
+          pio run -d standby 2>&1 | tee standby-build.log
+          grep -q "models/heyretro.tflite missing" standby-build.log
