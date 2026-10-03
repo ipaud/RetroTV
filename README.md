@@ -375,7 +375,8 @@ tele usa su micrófono. Todo pasa dentro de la tele: sin Internet y sin servicio
   subido al nivel de la voz para que se oiga bien. El canal **MENSAJES** se añade solo a la lista y los pone en bucle.
 - **Privacidad.** Las palmadas no graban nada: solo miden niveles. La grabadora solo graba cuando la pones en marcha
   desde la tele, con ● REC en pantalla; el mando web no puede grabar.
-- **Lo que no hay:** ni "HEY RETRO" ni comandos de voz.
+- **Lo que no hay:** ni "HEY RETRO" ni comandos de voz. «Hola ESP» para encender desde STANDBY VOZ está en prueba,
+  en compilaciones aparte (`voice_ww`, `voice_nokeys_ww`) con una app de standby: [docs/WAKEWORD.md](docs/WAKEWORD.md).
 
 Detalle, medidas y pruebas: [docs/VOICE.md](docs/VOICE.md).
 <br clear="right">
@@ -755,11 +756,13 @@ src/diagnostics/        Diagnostics: PSRAM, flash y heap en ejecución, escaneo 
 src/voice/              RETROTV Voice (solo con -e voice): captura del micrófono, palmadas, standby por voz, grabadora y canal MENSAJES
 lib/es8311/             driver ES8311 de Espressif, copiado sin modificar del sketch 07.1 de Freenove
 tools/                  convert_video.sh, make_index.py, make_logo.py, make_remote_sticker.py, make_demo_clip.sh, make_test_fixtures.sh,
-                        run_host_tests.sh, device_tests.py, remote_device_tests.py, stream_profiles.py, battery_log.py, make_dist.py
+                        run_host_tests.sh, device_tests.py, remote_device_tests.py, stream_profiles.py, battery_log.py, make_dist.py,
+                        standby_flash.sh
+standby/                app de standby «Hola ESP» (experimental, ESP-IDF 5.4.1 + ESP-SR, partición app1); ver docs/WAKEWORD.md
 test/                   tests en el ordenador (host, channel, overlay, onair, teletext, remote, web, config, wifi, battery y voice_tests.cpp)
 server/                 RETROTV Server (Python + FastAPI): canales por red y directos (FFmpeg, HLS, 3Cat, RTVE, Pluto TV); ver server/README.md
 data/example-config/    channels.json y wifi.example.json de ejemplo
-docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVIDERS, VOICE; img/ con las imágenes de este README
+docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVIDERS, VOICE, WAKEWORD; img/ con las imágenes de este README
 ```
 
 </details>

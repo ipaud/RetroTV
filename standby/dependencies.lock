@@ -1,0 +1,39 @@
+dependencies:
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.7.19~2
+  espressif/dl_fft:
+    component_hash: 965be7152132b365061abf5fc5fc7b85e525f73b94a204cdda61cfe9572c0d77
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 0.8.0
+  espressif/esp-dl:
+    component_hash: 3148b2692a2943d7e35401dc10a181b6ba83515ec70ef51499ac5d2593eef3e2
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 3.3.13
+  espressif/esp-sr:
+    component_hash: 698154c0a94f6c8ac3e1ac669ec3ea741e6f848022b0f89030eddb23f3a31e14
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 2.5.5
+  espressif/esp_new_jpeg:
+    component_hash: e1e7e6991193c41ed6c9fc386702aa7821433319e7aa9c3147cd3236310cd69c
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.0.2
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.4.1
+manifest_hash: 2330a3036614fa6bf3ca02dc9483f4415eb3c4d9a980a5081f4ed03702375e29
+target: esp32s3
+version: 1.0.0

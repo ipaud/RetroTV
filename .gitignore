@@ -11,3 +11,7 @@ server/config/channels.json
 
 include/title_tags.h
 dist/
+
+# standby app (docs/WAKEWORD.md): downloaded components and the generated full sdkconfig
+standby/managed_components/
+standby/sdkconfig.standby

@@ -103,7 +103,7 @@ constexpr long PAUTV_VALID_EPOCH = 1700000000;  // earlier = clock never set by 
 #ifndef PAUTV_CLAP_WAKE_ENABLED  // voice standby: two claps turn the TV off and on (AJUSTES > VOZ > APAGADO)
 #define PAUTV_CLAP_WAKE_ENABLED PAUTV_CLAP_ENABLED
 #endif
-#ifndef PAUTV_WAKEWORD_ENABLED  // reserved: "HEY RETRO" is not implemented (needs ESP-SR)
+#ifndef PAUTV_WAKEWORD_ENABLED  // experimental: STANDBY VOZ hands over to the "Hola ESP" app in app1 (docs/WAKEWORD.md)
 #define PAUTV_WAKEWORD_ENABLED 0
 #endif
 #ifndef PAUTV_VOICE_COMMANDS_ENABLED  // reserved: offline voice commands are not implemented
@@ -112,8 +112,11 @@ constexpr long PAUTV_VALID_EPOCH = 1700000000;  // earlier = clock never set by 
 #ifndef PAUTV_RECORDER_ENABLED  // short WAV messages, only with REC on screen (AJUSTES > VOZ)
 #define PAUTV_RECORDER_ENABLED PAUTV_MIC_ENABLED
 #endif
-#if PAUTV_WAKEWORD_ENABLED || PAUTV_VOICE_COMMANDS_ENABLED
-#error "HEY RETRO and voice commands are not implemented yet (docs/VOICE.md)"
+#if PAUTV_VOICE_COMMANDS_ENABLED
+#error "voice commands are not implemented (docs/VOICE.md)"
+#endif
+#if PAUTV_WAKEWORD_ENABLED && !PAUTV_CLAP_WAKE_ENABLED
+#error "PAUTV_WAKEWORD_ENABLED needs PAUTV_CLAP_WAKE_ENABLED (it lives in STANDBY VOZ)"
 #endif
 #if PAUTV_CLAP_ENABLED && !PAUTV_MIC_ENABLED
 #error "PAUTV_CLAP_ENABLED needs PAUTV_MIC_ENABLED"

@@ -36,7 +36,8 @@ usuario, con su sala y su voz; el detalle de cada prueba está en [TEST_PLAN.md]
 | Falsos encendidos en standby | **sin medir con log** | una sesión corta: 5 golpes sueltos sin encender; una noche (~6 h) en STANDBY VOZ sin encenderse, deducido de la batería (sin log) |
 | Grabadora (GRABADORA, 3-2-1, ● REC, WAV 16 kHz) | **implementada, probada** con la voz del usuario (v0.3) | se guarda subida al nivel de voz; la voz llega floja al micro, mejor a 20–30 cm |
 | Canal MENSAJES | **implementado, probado** (v0.3) | el micro oyó los mensajes por el altavoz, en orden y en bucle |
-| Wake word, comandos offline (ESP-SR) | **investigado, bloqueado** (fase M) | ver "Wake word y comandos" |
+| Wake word, comandos offline (ESP-SR) | **investigado, bloqueado** en este firmware (fase M) | ver "Wake word y comandos" |
+| «Hola ESP» en STANDBY VOZ | **prueba experimental** (`voice_ww`, `voice_nokeys_ww`), probada en la placa | una app de standby aparte con ESP-IDF 5 + ESP-SR 2.5.5: [WAKEWORD.md](WAKEWORD.md) |
 | "HEY RETRO" | **no implementado** | un modelo propio exige el servicio de pago de Espressif |
 | Comandos de voz | **no implementados** | MultiNet no tiene español |
 
@@ -59,7 +60,7 @@ salvo la palabra de activación y los comandos, que no existen.
 | `PAUTV_CLAP_ENABLED` | = `PAUTV_MIC_ENABLED` | 0 | 1 | detector y órdenes por palmadas |
 | `PAUTV_CLAP_WAKE_ENABLED` | = `PAUTV_CLAP_ENABLED` | 0 | 1 | apagar a STANDBY VOZ y encender con palmadas (sin ella, la doble silencia) |
 | `PAUTV_RECORDER_ENABLED` | = `PAUTV_MIC_ENABLED` | 0 | 1 | grabadora y borrado de mensajes |
-| `PAUTV_WAKEWORD_ENABLED` | 0 | 0 | 0 | reservada: "HEY RETRO" no está implementado |
+| `PAUTV_WAKEWORD_ENABLED` | 0 | 0 | 0 | experimental (`voice_ww`, `voice_nokeys_ww`): STANDBY VOZ pasa a la app «Hola ESP» de `app1` ([WAKEWORD.md](WAKEWORD.md)) |
 | `PAUTV_VOICE_COMMANDS_ENABLED` | 0 | 0 | 0 | reservada: los comandos de voz no están implementados |
 
 Para la carcasa sin botones hay un tercer entorno, `voice_nokeys` = `voice` + `-DPAUTV_HAS_KEYS=0` (ver STANDBY VOZ).

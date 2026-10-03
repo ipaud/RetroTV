@@ -10,6 +10,12 @@
 #include "board_config.h"
 #include "voice/VoiceStandby.h"
 
+#if PAUTV_WAKEWORD_ENABLED
+#include <Preferences.h>
+#include <esp_ota_ops.h>
+#include <string.h>
+#endif
+
 #if PAUTV_MIC_ENABLED
 
 namespace {
@@ -19,6 +25,34 @@ void db10Text(int16_t db10, char* out, size_t len) {
   const int a = db10 < 0 ? -db10 : db10;
   snprintf(out, len, "%s%d.%d", db10 < 0 && a != 0 ? "-" : "", a / 10, a % 10);
 }
+
+#if PAUTV_WAKEWORD_ENABLED
+// docs/WAKEWORD.md: STANDBY VOZ with «Hola ESP» runs in the standby app in app1 (ESP-IDF 5 + ESP-SR),
+// which makes app0 the boot partition again as it starts. Returns only if that app is not there (or
+// the switch failed): then this firmware's own STANDBY VOZ listens for claps as ever.
+void handOverToStandbyApp() {
+  const esp_partition_t* app1 = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, nullptr);
+  esp_app_desc_t desc = {};
+  if (app1 == nullptr || esp_ota_get_partition_description(app1, &desc) != ESP_OK ||
+      strncmp(desc.project_name, "retrotv_standby", sizeof(desc.project_name)) != 0) {
+    PLOG("STANDBY", "no standby app in app1: claps only");
+    return;
+  }
+  Preferences prefs;  // the standby app cannot know which case this is
+  if (prefs.begin("pautv", false)) {
+    prefs.putBool("ww_keys", PAUTV_HAS_KEYS != 0);
+    prefs.end();
+  }
+  const esp_err_t err = esp_ota_set_boot_partition(app1);
+  if (err != ESP_OK) {
+    PLOG("STANDBY", "cannot boot the standby app (%s): claps only", esp_err_to_name(err));
+    return;
+  }
+  PLOG("STANDBY", "handing over to the standby app %s («Hola ESP» + claps)", desc.version);
+  Serial.flush();
+  ESP.restart();
+}
+#endif
 
 }  // namespace
 
@@ -241,6 +275,9 @@ void App::voiceStandby() {
   const uint32_t t0 = millis();
   while (buttons_.anyKeyDown() && millis() - t0 < STANDBY_RELEASE_WAIT_MS) delay(10);  // the key that asked
   delay(BUTTON_DEBOUNCE_MS);
+#if PAUTV_WAKEWORD_ENABLED
+  handOverToStandbyApp();  // returns only when there is no standby app
+#endif
   Serial.flush();
   setCpuFrequencyMhz(VOICE_STANDBY_CPU_MHZ);
 
