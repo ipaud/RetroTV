@@ -77,4 +77,7 @@ size_t writeWifiListJson(const WifiNetworks& networks, const char* connectedSsid
 // channels.json: flips "enabled" of one channel, every other field untouched; written back one
 // channel per line, like the hand-written file. Writers return 0 when the output does not fit.
 bool channelsJsonSetEnabled(JsonDocument& doc, uint16_t number, bool enabled);
+// Voice builds: appends the MENSAJES channel (internal "messages") after the highest number, unless a
+// messages channel (or the id "mensajes") is already there. False when nothing was added.
+bool channelsJsonAddMessages(JsonDocument& doc, uint16_t& number);
 size_t writeChannelsFile(const JsonDocument& doc, char* out, size_t cap);

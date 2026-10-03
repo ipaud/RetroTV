@@ -17,6 +17,7 @@ constexpr const char* KEY_CLAP_ON = "clap_on";
 constexpr const char* KEY_CLAP_SENS = "clap_sens";
 constexpr const char* KEY_VOICE_STANDBY = "v_standby";
 constexpr const char* KEY_LISTEN_LED = "listen_led";
+constexpr const char* KEY_MSG_CHANNEL = "msg_ch";
 #endif
 
 }  // namespace
@@ -46,6 +47,14 @@ void SettingsStore::begin() {
 }
 
 #if PAUTV_MIC_ENABLED
+bool SettingsStore::messagesChannelAdded() const {
+  return open_ && const_cast<Preferences&>(prefs_).getBool(KEY_MSG_CHANNEL, false);
+}
+
+void SettingsStore::setMessagesChannelAdded() {
+  if (open_) prefs_.putBool(KEY_MSG_CHANNEL, true);
+}
+
 void SettingsStore::setMicOn(bool on) {
   if (on == current_.micOn) return;
   current_.micOn = on;

@@ -311,7 +311,7 @@ text-shadow:0 -1px 0 #0009,0 1px 0 #ffffff24}
 </div></section>
 <script>
 const $=i=>document.getElementById(i);let fails=0,listVer=null;
-const SKINS={'':'CL\u00c1SICO',negro:'NEGRO',plata:'PLATA',gris:'GRIS'},INK={'':'',negro:'&c=black',plata:'&c=black',gris:'&c=white'},root=document.documentElement;
+const SKINS={'':'CL\u00c1SICO',negro:'NEGRO',plata:'PLATA',gris:'GRIS'},INK={'':'',negro:'',plata:'',gris:'&c=white'},root=document.documentElement;
 function logoUrl(n){return '/api/logo?n='+n+'&v='+listVer+INK[root.dataset.skin||'']}
 function skin(s){if(!(s in SKINS))s='';root.dataset.skin=s;
 document.querySelector('meta[name=theme-color]').content=getComputedStyle(root).getPropertyValue('--body').trim();

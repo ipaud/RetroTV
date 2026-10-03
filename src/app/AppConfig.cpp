@@ -205,6 +205,32 @@ int App::saveWifi(const ConfigRequest& r, char* error, size_t errorCap) {
 }
 
 // channels.json on the SD (every other field untouched), then the live list and the remote's.
+// Voice builds put the MENSAJES channel in channels.json once (after the highest number), so it
+// shows in the web remote and the zapping without editing the card by hand. Removed by the user, it
+// stays removed: an NVS flag remembers it was added.
+void App::addMessagesChannel(JsonDocument& doc) {
+#if PAUTV_RECORDER_ENABLED
+  if (settings_.messagesChannelAdded()) return;
+  uint16_t number = 0;
+  if (!channelsJsonAddMessages(doc, number)) {  // already there (or no list): nothing to add, ever
+    settings_.setMessagesChannelAdded();
+    return;
+  }
+  char* file = static_cast<char*>(heap_caps_malloc(FILE_CAP, MALLOC_CAP_SPIRAM));
+  const size_t len = file != nullptr ? writeChannelsFile(doc, file, FILE_CAP) : 0;
+  const bool saved = len > 0 && storage_.writeFileAtomic(sdpath::CHANNELS_JSON, file, len);
+  heap_caps_free(file);
+  if (!saved) {  // shown this session anyway; tried again at the next boot
+    PLOG("CHANNEL", "MENSAJES added as %u but channels.json could not be written", static_cast<unsigned>(number));
+    return;
+  }
+  settings_.setMessagesChannelAdded();
+  PLOG("CHANNEL", "MENSAJES added to channels.json as channel %u", static_cast<unsigned>(number));
+#else
+  (void)doc;
+#endif
+}
+
 int App::saveChannelEnabled(uint16_t number, bool enabled, char* error, size_t errorCap) {
   if (!storage_.mounted()) {
     snprintf(error, errorCap, "no SD card");

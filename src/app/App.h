@@ -164,6 +164,7 @@ class App {
   bool saveMessage(size_t samples, int& id, const char*& error);
   void saveTestMessage();  // serial `Y`: a synthetic tone through the same save path (no microphone)
   void deleteMessages();   // serial `E`: every msg_NNNN.wav goes (nothing else in the folder)
+  void addMessagesChannel(JsonDocument& doc);  // voice builds, once: MENSAJES into channels.json
   // MENSAJES channel (internal source "messages").
   void startMessages();
   void updateMessages(uint32_t nowMs);

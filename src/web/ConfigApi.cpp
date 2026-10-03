@@ -260,6 +260,40 @@ bool channelsJsonSetEnabled(JsonDocument& doc, uint16_t number, bool enabled) {
   return false;
 }
 
+bool channelsJsonAddMessages(JsonDocument& doc, uint16_t& number) {
+  JsonArray list = doc["channels"].as<JsonArray>();
+  if (list.isNull()) return false;
+  int highest = -1;
+  bool used[CHANNEL_NUMBER_MAX + 1] = {};
+  for (JsonObjectConst ch : list) {
+    const char* type = ch["type"] | "";
+    const char* source = ch["source"] | "";
+    const char* id = ch["id"] | "";
+    if ((strcmp(type, "internal") == 0 && strcmp(source, "messages") == 0) || strcmp(id, "mensajes") == 0) return false;
+    if (!ch["number"].is<uint16_t>() || ch["number"].as<uint16_t>() > CHANNEL_NUMBER_MAX) continue;
+    const uint16_t n = ch["number"];
+    used[n] = true;
+    if (n > highest) highest = n;
+  }
+  int pick = highest + 1;
+  if (pick > CHANNEL_NUMBER_MAX) {  // 999 taken: the first free number
+    pick = -1;
+    for (int n = 1; n <= CHANNEL_NUMBER_MAX && pick < 0; ++n) {
+      if (!used[n]) pick = n;
+    }
+    if (pick < 0) return false;
+  }
+  JsonObject ch = list.add<JsonObject>();
+  ch["id"] = "mensajes";
+  ch["number"] = pick;
+  ch["name"] = "MENSAJES";
+  ch["type"] = "internal";
+  ch["source"] = "messages";
+  ch["enabled"] = true;
+  number = static_cast<uint16_t>(pick);
+  return true;
+}
+
 size_t writeChannelsFile(const JsonDocument& doc, char* out, size_t cap) {
   Out o{out, cap};
   o.text("{\n  \"channels\": [\n");

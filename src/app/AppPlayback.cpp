@@ -59,6 +59,7 @@ void App::loadChannels() {
   } else if (!storage_.loadJson(sdpath::CHANNELS_JSON, doc, error, sizeof(error))) {
     problem("CHANNELS.JSON", error);
   } else {
+    addMessagesChannel(doc);  // voice builds, once: MENSAJES in the list without editing the file
     LoadReport report;
     const bool ok = channels_.load(doc.as<JsonVariantConst>(), report);
     if (report.skipped > 0) {

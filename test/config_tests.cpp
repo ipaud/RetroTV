@@ -157,6 +157,28 @@ static void testVoiceBodies() {
   CHECK(writeVoiceJson(c, out, 20) == 0);  // never a cut-off JSON
 }
 
+static void testAddMessagesChannel() {
+  JsonDocument doc;
+  deserializeJson(doc, R"({"channels": [{"id": "a", "number": 3, "name": "A", "type": "local", "source": "/x"},
+                                         {"id": "qr", "number": 33, "name": "MANDO", "type": "internal", "source": "mando"}]})");
+  uint16_t n = 0;
+  CHECK(channelsJsonAddMessages(doc, n) && n == 34);  // after the highest
+  JsonObjectConst added = doc["channels"][2];
+  CHECK(std::string(added["source"] | "") == "messages" && std::string(added["type"] | "") == "internal" &&
+        std::string(added["name"] | "") == "MENSAJES" && added["enabled"] == true);
+  CHECK(!channelsJsonAddMessages(doc, n) && doc["channels"].size() == 3);  // never twice
+  JsonDocument full;
+  deserializeJson(full, R"({"channels": [{"id": "z", "number": 999, "name": "Z", "type": "local", "source": "/z"},
+                                          {"id": "u", "number": 1, "name": "U", "type": "local", "source": "/u"}]})");
+  CHECK(channelsJsonAddMessages(full, n) && n == 2);  // 999 taken: the first free one
+  JsonDocument named;
+  deserializeJson(named, R"({"channels": [{"id": "mensajes", "number": 7, "name": "Notas", "type": "local", "source": "/n"}]})");
+  CHECK(!channelsJsonAddMessages(named, n));  // the id is taken: leave the user's file alone
+  JsonDocument broken;
+  deserializeJson(broken, R"({"canales": []})");
+  CHECK(!channelsJsonAddMessages(broken, n));
+}
+
 void runConfigTests() {
   testPairing();
   testPairingLimits();
@@ -165,4 +187,5 @@ void runConfigTests() {
   testWifiListNeverShowsPasswords();
   testChannelsJsonToggle();
   testVoiceBodies();
+  testAddMessagesChannel();
 }

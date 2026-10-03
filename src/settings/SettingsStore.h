@@ -32,6 +32,9 @@ class SettingsStore {
   bool listenLed() const { return current_.listenLed; }
   void setVoiceStandby(bool on);
   void setListenLed(bool on);
+  // The MENSAJES channel was put in channels.json once: if the user removes it, it stays removed.
+  bool messagesChannelAdded() const;
+  void setMessagesChannelAdded();  // written at once
 #endif
 
  private:

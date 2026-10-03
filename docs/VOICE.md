@@ -289,7 +289,10 @@ siempre a STANDBY VOZ:
 - Serie `E` **borra todos los mensajes** (solo los `msg_NNNN.wav`; nada más de la carpeta). No lo hace con
   MENSAJES en pantalla, que podría estar leyendo uno: primero se cambia de canal.
 
-**El canal MENSAJES** es un canal interno más; se añade a `channels.json` con el número que se quiera:
+**El canal MENSAJES** es un canal interno más. El firmware con voz **lo añade solo** a `channels.json` la primera vez
+que arranca, con el número siguiente al más alto (o el primero libre si el 999 está cogido), para que salga en el
+mando web y en el zapeo sin tocar la tarjeta. Si ya hay uno (o un canal con id `mensajes`), no añade nada. Una marca
+en NVS recuerda que se añadió: si lo borras de `channels.json`, no vuelve. También se puede escribir a mano:
 
 ```json
 { "id": "mensajes", "number": 98, "name": "MENSAJES", "type": "internal", "source": "messages" }

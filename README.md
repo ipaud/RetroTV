@@ -266,11 +266,11 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
   de un mando de verdad:
   - CLÁSICO, el de siempre;
   - NEGRO, de televisor de los 90: teclas beige, canal en naranja, pantalla fluorescente y un panel hundido con
-    volumen, un INFO redondo como un joystick y canal, encima de los canales; logos en negro;
+    volumen, un INFO redondo como un joystick y canal, encima de los canales; logos en color;
   - PLATA, de los 2000: plateado cepillado, teclas de colores, un gran aro que hace de cruceta (CH+ arriba, CH−
-    abajo, VOL− y VOL+ a los lados, INFO en medio) y GUÍA en la píldora azul del MENU; logos en negro;
+    abajo, VOL− y VOL+ a los lados, INFO en medio) y GUÍA en la píldora azul del MENU; logos en color;
   - GRIS, europeo de cabeza redonda: la cabeza, más ancha que el cuerpo, lleva volumen, canal, encendido y silencio;
-    logos en blanco.
+    logos en blanco, de una sola tinta.
   Cada móvil recuerda el suyo, y `http://retrotv.local/?skin=negro` (o `plata`, `gris`) abre uno directamente.
 <img src="docs/img/guia.jpg" width="260" align="right" alt="La guía del mando web: cada canal con su logo, el capítulo de ahora con una barra de progreso y los minutos que quedan, y los siguientes con su hora">
 
@@ -286,7 +286,7 @@ Con la tele en la Wi-Fi, abre **http://retrotv.local** en el móvil, conectado a
   pantallas retina. `tools/make_logo.py <archivo|url> <id> <carpeta>` los prepara: recorta, iguala el peso visual
   (una palabra fina ocupa más que un bloque macizo) y aclara los logos negros, que no se verían sobre las teclas oscuras.
   Para un logo blanco impreso sobre una caja negra, el modo `mono` deja solo las letras.
-- **Tres versiones:** `<id>.png` en color, `<id>.black.png` en negro (para las teclas claras) y `<id>.white.png` en
+- **Tres versiones:** `<id>.png` en color (CLÁSICO, NEGRO y PLATA), `<id>.black.png` en negro (sin uso por ahora) y `<id>.white.png` en
   blanco. Un logo plano sale en silueta; uno con letras perfiladas, en tonos de una sola tinta (`--black` y `--white`
   eligen `solid` o `tonal`). Si falta una versión, la tele sirve la de color.
 - **Carga:** la tele los lee a PSRAM al arrancar, así que nunca compiten con el vídeo por la SD. El móvil los guarda
@@ -651,7 +651,7 @@ SDKROOT=$(xcrun --show-sdk-path) CXX=g++-16 tools/run_host_tests.sh   # GCC de H
 SANITIZE=0 tools/run_host_tests.sh   # sin sanitizers
 ```
 
-Son 686 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
+Son 692 comprobaciones de la lógica pura (clics, gestos, ejes del táctil, volumen y sintetizador, separador MJPEG,
 reloj A/V, `channels.json`, nombres ASCII, recorte del OSD, índice `.idx`, posición en emisión, teletexto, anillo de
 bytes, protocolo de canales remotos, mando web y ajustes, redes Wi-Fi, batería y voz: niveles, palmadas, standby por
 voz y grabadora), compiladas con clang, ASan y UBSan, más los autotests de `make_index.py` y `make_dist.py`. No hace falta la placa.
