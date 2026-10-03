@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "board_config.h"
+#include "power/LedPattern.h"
 #include "voice/VoiceStandby.h"
 
 #if PAUTV_WAKEWORD_ENABLED
@@ -310,15 +311,11 @@ void App::voiceStandby() {
     bool wake = a == StandbyAction::Wake;
     if (a == StandbyAction::Blink) {
       PLOG("STANDBY", "clap: I heard you");
-      if (settings_.listenLed()) {
-        digitalWrite(PIN_LED_FRONT, HIGH);
-        ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;
-      }
+      if (settings_.listenLed()) ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;
     }
-    if (ledOffAtMs != 0 && static_cast<int32_t>(now - ledOffAtMs) >= 0) {
-      digitalWrite(PIN_LED_FRONT, LOW);
-      ledOffAtMs = 0;
-    }
+    if (ledOffAtMs != 0 && static_cast<int32_t>(now - ledOffAtMs) >= 0) ledOffAtMs = 0;
+    const bool batteryLow = battery_.level() != BatteryLevel::Ok;
+    digitalWrite(PIN_LED_FRONT, ledOffAtMs != 0 || standbyLed(now, false, batteryLow) ? HIGH : LOW);
     if (buttons_.anyKeyDown()) {
       PLOG("STANDBY", "a key");
       wake = true;
@@ -350,6 +347,7 @@ void App::voiceStandby() {
     }
     if (wake) {
       PLOG("STANDBY", "%s: switching on", a == StandbyAction::Wake ? "three claps" : "woken");
+      digitalWrite(PIN_LED_FRONT, HIGH);  // "I heard you", before the restart
       Serial.flush();
       ESP.restart();
     }
@@ -418,6 +416,7 @@ void App::updateRecorder(uint32_t nowMs) {
     recFlow_.stop(nowMs);
     p = recFlow_.phase();
   }
+  digitalWrite(PIN_LED_FRONT, p != RecPhase::Recording || recordingLed(nowMs) ? HIGH : LOW);  // privacy: REC blinks
   if (p == RecPhase::Saving) {
     publishRecorder(nowMs);  // GUARDANDO while the card is written (~1 s for 15 s)
     const size_t samples = mic_.stopRecording();

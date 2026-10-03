@@ -129,7 +129,11 @@ Cableado (el mismo en cualquier carcasa):
 
 - **Teclas:** pulsadores de 6x6 mm a GND, de izquierda a derecha CH− GPIO2, CH+ GPIO3, VOL− GPIO14, VOL+ GPIO21 (los
   cuatro pines del conector de expansión). Se leen con `INPUT_PULLUP` interno (~45K): el conector no tiene pull-ups.
-- **LED:** TXD del conector UART (GPIO43, libre porque el log va por USB) con ~1K en serie.
+- **LED:** TXD del conector UART (GPIO43, libre porque el log va por USB) con ~1K en serie; el ánodo hacia la resistencia
+  y TXD, el cátodo a GND del mismo conector; RXD y 5V aislados. Parpadea un instante al arrancar (el chip escribe por
+  ese pin). Qué muestra: encendido mientras funciona, apagado un instante con cada orden, destello por palmada en
+  STANDBY VOZ, encendido al instante al despertar, parpadeo a 2 Hz mientras graba (GRABADORA o micro por USB), un
+  latido cada 4 s en STANDBY WI-FI y un doble destello cada 10 s con la batería baja en standby (`power/LedPattern.h`).
 - El conector de expansión no tiene GND. Sácalo del conector I2C (3V3, GND, IO15, IO16) o del UART (RXD, TXD, GND, 5V).
 - Con la placa suelta, BOOT (GPIO0): clic = canal siguiente, doble clic = anterior, mantener = ajustes.
 - **Si se alarga la microSD** con un cable (el modelo v9 no describe ninguno), las pistas de 40 MHz se alargan: la tele se

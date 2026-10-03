@@ -3,6 +3,7 @@
 
 #include "check.h"
 #include "power/Battery.h"
+#include "power/LedPattern.h"
 #include "power/Standby.h"
 
 static void testPercent() {
@@ -107,7 +108,25 @@ static void testStandbyMode() {
   CHECK(flatCheckSwitchOn(4120, 3700));
 }
 
+static void testLedPatterns() {
+  CHECK(recordingLed(0) && recordingLed(LED_REC_HALF_MS - 1));
+  CHECK(!recordingLed(LED_REC_HALF_MS) && recordingLed(2 * LED_REC_HALF_MS));
+  // Dark standby: nothing to show.
+  CHECK(!standbyLed(0, false, false) && !standbyLed(12345, false, false));
+  // STANDBY WI-FI: one short heartbeat per period.
+  CHECK(standbyLed(0, true, false) && standbyLed(LED_HEARTBEAT_ON_MS - 1, true, false));
+  CHECK(!standbyLed(LED_HEARTBEAT_ON_MS, true, false) && standbyLed(LED_HEARTBEAT_MS + 1, true, false));
+  // Battery low: two flashes with a gap, then dark until the next period.
+  CHECK(standbyLed(0, false, true) && !standbyLed(LED_LOW_FLASH_MS, false, true));
+  CHECK(standbyLed(2 * LED_LOW_FLASH_MS, false, true) && !standbyLed(3 * LED_LOW_FLASH_MS, false, true));
+  CHECK(!standbyLed(LED_LOW_BATTERY_MS / 2, false, true) && standbyLed(LED_LOW_BATTERY_MS, false, true));
+  int on = 0;
+  for (uint32_t ms = 0; ms < LED_LOW_BATTERY_MS; ms += 10) on += standbyLed(ms, false, true) ? 1 : 0;
+  CHECK(on == 2 * static_cast<int>(LED_LOW_FLASH_MS / 10));  // dark almost all the time: the battery is low
+}
+
 void runBatteryTests() {
+  testLedPatterns();
   testPercent();
   testWarnings();
   testEmpty();

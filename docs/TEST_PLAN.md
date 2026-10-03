@@ -22,7 +22,7 @@ Resumen por funciones; el detalle y la fecha de cada prueba están en las tablas
 | Mando web y ajustes | API, emparejamiento, Wi-Fi, canales | mando, guía, logos, ajustes, varias redes Wi-Fi (T14, T15, T17) | — |
 | **Cuatro teclas de la carcasa** | lógica de pulsar y mantener (T19.1, T22.1) | — | **con los pulsadores montados** (T19.2) y encender con ellas (T22.3) |
 | BOOT con la placa suelta | — | clic, doble clic, mantener, encender desde el reposo (T3.4–T3.6, T22.3) | — |
-| LED del frontal | — | destello en STANDBY VOZ (TV10) | encendido y parpadeo con cada orden (T19.3) |
+| LED del frontal | patrones de standby y de grabación (`power/LedPattern.h`) | encendido, parpadeo con cada orden, destello por palmada, encendido al despertar, GRABADORA, latido de STANDBY WI-FI (T19.3, T19.4, 2026-10-03) | doble destello con la batería baja (T19.4) |
 | Reposo AHORRO MAX | lógica de apagado | apagar y encender con BOOT (T22.2, T22.3, TV13) | consumo (T22.4) |
 | Carcasa sin botones (`voice_nokeys`) | qué hace apagar, despertar por batería (T22.5) | ⏻ del mando a STANDBY VOZ y encender con palmadas (T22.6); sin palmadas, apagar y encender con el mando (T22.7); despertar solo con el USB tras `F` (T22.8) | la batería agotada de verdad (solo simulada con `F`); consumo de STANDBY WI-FI |
 | Batería | curva, avisos, detección de carga | lecturas, carga del 81 al 99 % en ~2 h 45 min (T19.6) | descarga completa y autonomía real, avisos del 15 y 5 % con la LiPo, apagado por batería agotada |
@@ -64,7 +64,7 @@ Resumen por funciones; el detalle y la fecha de cada prueba están en las tablas
    curva de volumen 45..85 con el altavoz montado (T5.9, T7.13–T7.15). Volumen, silencio, su OSD y su memoria ya se
    probaron con los comandos serie y el mando web. (Los antiguos mandos de CANAL y VOLUMEN, T3.7 y T3.8, se sustituyeron
    por estas cuatro teclas.)
-6. **LED del frontal** (GPIO43, T19.3).
+6. **LED con la batería baja en standby** (T19.4): el doble destello, con una descarga real.
 7. **Arrancar con un `channels.json` roto** (T7.17) y ver la pantalla de error sin SD (T7.16, hasta ahora solo por log).
 8. **Rotación 3** (T1.9) y **arranque sin ordenador** (T1.10), ya dentro de la carcasa.
 9. ~~**SPI a 80 MHz**~~ probado 2026-10-01: la imagen sale mal. En su lugar, vídeo local a 20 fps (ver HARDWARE.md).
@@ -389,7 +389,8 @@ reproductor, mientras la Wi-Fi recibe y/o busca redes cada 10 s; cada fallo vuel
 |---|---|---|---|---|---|
 | T19.1 | Lógica de las teclas | `tools/run_host_tests.sh` | Pulsar actúa al soltar, sin esperar el doble clic; dos pulsaciones son dos órdenes; mantener actúa una vez; CH+ mantenida = ajustes, VOL− mantenida = silencio | HOST | OK 2026-09-30: 489 checks |
 | T19.2 | Teclas en la placa | Pulsadores entre GPIO2/3/14/21 y GND | `[INPUT] CH_PREV`, `CH_NEXT`, `VOL_DOWN`, `VOL_UP`; mantener CH+ `MENU`, mantener VOL− `MUTE` | REQUIRES HARDWARE TEST | Pendiente de cablear |
-| T19.3 | LED | LED + 1K en GPIO43 | Encendido; se apaga un instante con cada orden (teclas y mando web) | REQUIRES HARDWARE TEST | Pendiente. En STANDBY VOZ el usuario vio su destello (TV10) |
+| T19.3 | LED | LED + 1K en GPIO43 | Encendido; se apaga un instante con cada orden (teclas y mando web) | REQUIRES HARDWARE TEST | OK 2026-10-03, montado en la carcasa (TXD del conector UART, RXD y 5V aislados): encendido viendo la tele, parpadeo con cada cambio de canal (serie `n`, `n`, `p`); en STANDBY VOZ apagado, destello por palmada, fijo mientras la app de standby manda el micro por USB; tres palmadas la encienden (usuario: «todo bien») |
+| T19.4 | Patrones del LED | GRABADORA; STANDBY WI-FI; batería por debajo del 15 % en cualquier standby; «Hola ESP», «Hey Retro» o palmadas | Parpadeo a 2 Hz mientras graba; un latido corto cada 4 s; doble destello cada 10 s; encendido al instante al despertar | REQUIRES HARDWARE TEST | Lógica OK en el ordenador (701 checks). Placa OK 2026-10-03 (usuario: «todo bien»): GRABADORA (serie `R`, msg_0001 de 5,9 s) parpadea durante ● REC y vuelve a fijo; tres palmadas en STANDBY VOZ encienden el LED al instante, antes de la imagen; STANDBY WI-FI (sin palmadas, ⏻ del mando web) da su latido y ⏻ la enciende. **Batería baja pendiente** en la placa (no se puede simular sin descargarla) |
 | T19.5 | Batería: lógica | `tools/run_host_tests.sh` | Curva LiPo monótona, 3825 mV = 50 %; un aviso al pasar a baja y otro a crítica, ninguno con lecturas que oscilan en el 15 %; baja al arrancar también avisa; JSON `battery` / `battery_low` | HOST | OK 2026-09-30: 504 checks |
 | T19.6 | Batería en la placa | Sin LiPo, con USB | `[BOOT] battery ~4.1 V`, `/api/state` con `battery` ~90 y `battery_low: false`; pila en la barra del canal | REQUIRES HARDWARE TEST | OK 2026-09-30: 4136 mV, `battery: 92`; la pila en la barra del canal, vista por el usuario. Con la LiPo: comprobar el porcentaje, el aviso al 15 % y la carga |
 | T19.4 | microSD con alargador | `D 1200 … scan` con la carcasa montada | Timeouts recuperados; comparar con T18.2 (22 en 20 min) | REQUIRES HARDWARE TEST | Solo si se monta un alargador (era de la v5; el modelo v9 no describe ninguno) |

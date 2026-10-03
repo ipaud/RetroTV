@@ -11,6 +11,7 @@
 
 #include "board_config.h"
 #include "config.h"
+#include "power/LedPattern.h"
 #include "power/Standby.h"
 
 void App::begin() {
@@ -444,6 +445,7 @@ void App::powerDown(bool keepWifi) {
 }
 
 void App::deepSleep() {
+  digitalWrite(PIN_LED_FRONT, LOW);  // a standby pattern may have left it on: it would stay on all night
   for (const int pin : {PIN_LCD_BL, PIN_AMP_EN, PIN_LED_FRONT}) gpio_hold_en(static_cast<gpio_num_t>(pin));
   gpio_deep_sleep_hold_en();
 
@@ -502,10 +504,12 @@ void App::remoteStandby() {
       s.charging = battery_.charging();
       web_.publish(s);
     }
+    digitalWrite(PIN_LED_FRONT, standbyLed(now, true, battery_.level() != BatteryLevel::Ok) ? HIGH : LOW);
     RemoteCommand c;
     while (web_.poll(c)) {
       if (c.pairCode != 0 || c.paired) continue;  // pairing waits until it is on
       PLOG("STANDBY", "web remote: switching on");
+      digitalWrite(PIN_LED_FRONT, HIGH);
       Serial.flush();
       ESP.restart();
     }

@@ -42,6 +42,7 @@
 #include "config.h"
 #include "es8311.h"
 #include "power/Battery.h"
+#include "power/LedPattern.h"
 #include "voice/ClapDetector.h"
 #include "voice/MicMeter.h"
 #include "voice/VoiceStandby.h"
@@ -325,6 +326,7 @@ void wake(const char* cause, uint32_t startMs) {
     SLOG("wake: %s, but the TV cannot be booted (%s): staying here", cause, esp_err_to_name(err));
     return;
   }
+  gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT), 1);  // "I heard you" at once; the picture takes ~3.5 s
   SLOG("wake: %s, %" PRIu32 " s in standby: switching the TV on", cause, (nowMs() - startMs) / 1000);
   fflush(stdout);
   vTaskDelay(pdMS_TO_TICKS(50));  // let the USB serial send the line
@@ -416,6 +418,7 @@ extern "C" void app_main() {
           SLOG("«Hola ESP» #%" PRIu32 " detected (detect %" PRIu32 " us, %" PRIu32 " ms after start, loudest %s dB)%s",
                ++st.detections, us, now - startMs, peak, countOnly ? ": counting only" : "");
           if (!countOnly) wake("«Hola ESP»", startMs);
+          if (settings.listenLed) ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;  // counting only: a flash
         }
       }
     }
@@ -446,15 +449,11 @@ extern "C" void app_main() {
       } else if (pending && !standby.pending()) {
         SLOG("a bang right after: not switching on");
       }
-      if (a == StandbyAction::Blink && settings.listenLed) {
-        gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT), 1);
-        ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;
-      }
+      if (a == StandbyAction::Blink && settings.listenLed) ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;
     }
-    if (ledOffAtMs != 0 && static_cast<int32_t>(now - ledOffAtMs) >= 0) {
-      gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT), 0);
-      ledOffAtMs = 0;
-    }
+    if (ledOffAtMs != 0 && static_cast<int32_t>(now - ledOffAtMs) >= 0) ledOffAtMs = 0;
+    const bool batteryLow = batteryOk && battery.level() != BatteryLevel::Ok;  // power/LedPattern.h
+    gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT), ledOffAtMs != 0 || standbyLed(now, false, batteryLow));
 
     const bool keyDown = anyKeyDown();
     if (keysArmed && keyDown) wake("a key", startMs);
