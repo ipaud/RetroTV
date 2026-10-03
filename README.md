@@ -56,7 +56,8 @@ de un servidor en casa.
   montaje de tu tarjeta.
 - **Opcional:** una LiPo de una celda con JST 1,25 (antes de conectarla, lee
   [la comprobación de polaridad](docs/HARDWARE.md#batería)), y los pulsadores y el LED de la carcasa
-  ([cableado](docs/HARDWARE.md#integración-física-en-la-carcasa)).
+  ([cableado](docs/HARDWARE.md#integración-física-en-la-carcasa)). Para montar una carcasa completa:
+  [lista de materiales y orden de montaje](docs/HARDWARE.md#montaje).
 
 ### Primera prueba: el clip de demostración
 
@@ -213,7 +214,7 @@ sus diseños, la guía y el emparejamiento: [mando web](docs/REMOTE.md).
 
 | Para | Guía |
 |---|---|
-| Montar la placa, los pines, la batería y la carcasa | [Hardware](docs/HARDWARE.md) |
+| Montar la placa, los pines, la batería y la carcasa | [Hardware](docs/HARDWARE.md) · [lista de materiales y montaje](docs/HARDWARE.md#montaje) |
 | Preparar la microSD, convertir vídeos, escribir los canales y configurar la Wi-Fi | [Canales, vídeos y microSD](docs/CHANNELS.md) |
 | Manejar la tele: teclas, apagado, batería, LED, menú y palmadas | [Controles](docs/CONTROLS.md) |
 | Usar el mando del móvil y su API | [Mando web](docs/REMOTE.md) |
@@ -223,6 +224,7 @@ sus diseños, la guía y el emparejamiento: [mando web](docs/REMOTE.md).
 | «Hola ESP» y «Hey Retro» (experimental) | [Wake word](docs/WAKEWORD.md) |
 | Compilar, depurar, ejecutar los tests y saber qué comprueba la CI | [Desarrollo](docs/DEVELOPMENT.md) |
 | Ver qué se ha probado en la placa y qué falta | [Plan de pruebas](docs/TEST_PLAN.md) · [medidas de red](docs/NETWORK_TUNING.md) |
+| Proponer un cambio: qué comprobar y qué no subir | [Contribuir](CONTRIBUTING.md) |
 
 ## Estado y limitaciones
 

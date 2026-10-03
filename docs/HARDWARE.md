@@ -171,6 +171,61 @@ Cableado (el mismo en cualquier carcasa):
 - Reposo profundo (AHORRO MAX): sin medir.
 - El porcentaje sale de una curva genérica de LiPo (`src/power/Battery.h`), no de una descarga real de esta celda.
 
+## Montaje
+
+Los archivos de la carcasa no están publicados todavía; esta sección sirve para quien los tenga y para saber qué
+hace falta. El cableado y sus pines son los de [Integración física en la carcasa](#integración-física-en-la-carcasa).
+
+### Lista de materiales
+
+| Pieza | tele90 v9 | tele90 v10 sin botones | Notas |
+|---|---|---|---|
+| Freenove ESP32-S3 Display 2.8″, FNK0104A o FNK0104B | 1 | 1 | [Variante A o B](#variante-a-o-b-cómo-saberlo) |
+| microSD | 1 | 1 | FAT32 con esquema MBR |
+| Altavoz de 40 × 28 mm | 1 | 1 | Al conector de altavoz de la placa (JST de 1,25 mm, 2 pines) |
+| LiPo de una celda, YUNIQUE 103665 (3,7 V, 3000 mAh anunciados, JST 1,25) | 1 | 1 | Comprueba la [polaridad](#batería) antes de conectarla |
+| Pulsador de 6 × 6 mm | 4 | — | Entre su GPIO y GND |
+| LED | 1, de 3 mm | 1, de 5 mm | Al TXD del conector UART (GPIO43) |
+| Resistencia de ~1 kΩ | 1 | 1 | En serie con el LED |
+| Imanes | 12 | 8, de 8 × 1,5 mm | El cierre, sin tornillos |
+| Piezas impresas | Frontal, cuerpo, tapa trasera, 4 teclas, soporte de pulsadores y 4 patas | Frontal, cuerpo y 4 patas | Ver abajo |
+| Cable fino y flexible | — | — | Para teclas y LED; el GND, del conector I2C o del UART |
+
+### Impresión
+
+- **tele90 v9:** PLA o PETG, con patas de TPU. Unas 7 h y ~100 g según su modelo. Solo el cuerpo lleva soportes, por
+  dentro.
+- **tele90 v10 sin botones** (perfil PETG del proyecto): frontal de 92,5 × 85 × 18 mm y cuerpo de 89,5 × 83,5 ×
+  52,3 mm, los dos con soportes en árbol, capas de 0,16 mm y relleno del 12 %. Las patas van sin soportes y con un
+  borde (brim) de 5 mm; también hay una versión en TPU que encaja a presión, sin pegamento.
+
+### Orden de montaje
+
+1. **Prueba la placa suelta**, con el altavoz conectado: la primera prueba del [README](../README.md#primera-prueba-el-clip-de-demostración)
+   (clip de demostración, imagen, sonido y microSD).
+2. **Graba el firmware de tu variante:** `voice_nokeys` (o `voice_nokeys_ww`) en la v10 sin botones; `pautv` o `voice`
+   en la v9 ([variantes](../README.md#variantes-qué-montar-y-qué-firmware)).
+3. **Cablea el LED** con la resistencia en serie: el ánodo hacia la resistencia y el TXD, el cátodo a GND del mismo
+   conector; RXD y 5V, aislados. Con la tele encendida, el LED queda fijo y se apaga un instante con cada orden.
+4. **En la v9, cablea las cuatro teclas** y comprueba cada una en el registro serie (`[INPUT] CH_PREV`, `CH_NEXT`,
+   `VOL_DOWN`, `VOL_UP`; prueba T19.2 del [plan de pruebas](TEST_PLAN.md)).
+5. **Conecta la LiPo** después de comprobar su polaridad con un polímetro.
+6. **Monta** el altavoz, la placa y la batería en el cuerpo, y cierra con los imanes.
+7. **Con la carcasa cerrada**, repite lo básico: USB-C accesible, microSD, sonido y Wi-Fi (la carcasa y los cables
+   cambian el margen de la radio y de la SD).
+8. **Haz una prueba larga** antes de darla por terminada: el soak `S300` durante 2 h o más (T9.6).
+
+### Antes de cerrar la carcasa
+
+- [ ] Arranca siempre, sin reinicios en el registro.
+- [ ] La imagen sale en horizontal y con los colores correctos.
+- [ ] El altavoz suena limpio.
+- [ ] La microSD monta y el clip de demostración se ve.
+- [ ] El LED se enciende y parpadea con cada orden.
+- [ ] En la v9, las cuatro teclas responden.
+- [ ] La batería marca un porcentaje y, al enchufar el USB-C, CARGANDO.
+- [ ] Ningún cable queda pinzado, ningún pin de la batería puede tocar otro y el USB-C sigue accesible.
+
 ## Verificado en la placa del usuario (2026-09-29)
 
 - Chip ESP32-S3 rev v0.2. USB-Serial-JTAG 303A:1001 en `/dev/cu.usbmodem101`.
