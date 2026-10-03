@@ -100,16 +100,19 @@ esos tres valores. No se guardan en NVS porque ninguna pantalla los modifica.
 
 ## Integración física en la carcasa
 
-**Carcasa vigente: tele90 v9**, diseño propio modelado en Blender por script. Mide **92,5 × 85 × 59 mm** (ancho ×
-alto × fondo, sin las patas) según su modelo. Los archivos del modelo **no están en este repositorio** y la carcasa no
+**Carcasas: tele90 v9** (con teclas) **y v10** (en dos piezas; por ahora, solo sin botones), diseño propio modelado en Blender
+por script. La v9 mide **92,5 × 85 × 59 mm** (ancho × alto × fondo, sin las patas) según su modelo. Los archivos del modelo **no están en este repositorio** y la carcasa no
 se distribuye como imprimible hasta publicar sus STL revisados.
 
-- **Piezas:** frontal, cuerpo y tapa trasera, 4 teclas, soporte de pulsadores y 4 patas.
+- **Piezas:** frontal, cuerpo y tapa trasera, 4 teclas, soporte de pulsadores y 4 patas. Las tres piezas cierran con
+  12 imanes, sin tornillos, y la placa va sujeta sobre pivotes. Pensada para PLA o PETG con patas de TPU (unas 7 h y
+  ~100 g, según el modelo).
 - **Dentro:** la placa tras la ventana, el altavoz de 40×28 mm bajo la rejilla del techo y la LiPo **detrás de la placa**,
   en el cuerpo.
 - **Por fuera:** 4 teclas con su símbolo grabado, LED de 3 mm (piloto) y USB-C directo por el lateral derecho.
 - **tele90 v10:** la v9 en dos piezas (frontal y un cuerpo con la trasera cerrada, 8 imanes), mismas medidas.
-  Tiene una **variante sin botones**: frontal liso con solo el LED, que se maneja con el mando web y las palmadas.
+  Por ahora solo existe la **variante sin botones**: frontal liso con solo el LED (de 5 mm), que se maneja con el
+  mando web y las palmadas. Una v10 con teclas vendrá más adelante.
   Esa variante necesita el firmware `voice_nokeys` (ver abajo). Archivos fuera del repo, como los de la v9.
 - **Versiones anteriores** (v5 y las de 97 y 112 mm de fondo): superadas. Sus cotas, la ventana de pantalla, la posición
   de la batería y el alargador de microSD **no valen para la v9**.
@@ -199,8 +202,8 @@ Cableado (el mismo en cualquier carcasa):
 
 - **Las cuatro teclas montadas** (GPIO2, 3, 14 y 21 a GND, T19.2) y encender con ellas desde el reposo (T22.3). Hasta
   ahora se han usado BOOT, el mando web y el puerto serie; la lógica de las teclas solo está probada en el ordenador.
-- **El LED del frontal completo** (T19.3): encendido mientras funciona y apagado un instante con cada orden. En STANDBY
-  VOZ el usuario vio su destello (TV10).
+- **El aviso del LED con la batería baja** (T19.7): el resto de patrones del LED ya se probó en la placa (T19.3,
+  2026-10-03).
 - Rango útil del volumen (`CODEC_VOLUME_MIN/MAX` = 45..85) con el altavoz montado detrás de la rejilla.
 - Autonomía real y curva del porcentaje (`power/Battery.h`, genérica) con una descarga completa
   (`tools/battery_log.py`); consumo con un medidor en reproducción, STANDBY VOZ y reposo (T22.4, TV12).

@@ -19,10 +19,46 @@ Cómo está construido el firmware y por qué. Los pines están en [HARDWARE.md]
 4. **La lógica pura se prueba en el ordenador.**
    - Clics, gestos, ejes del táctil, sintetizador, separador MJPEG, reloj A/V, `channels.json` y recorte del OSD no
      incluyen `Arduino.h`.
-   - `tools/run_host_tests.sh` los compila con ASan y UBSan: 253 comprobaciones, más el autotest de
-     `make_index.py`.
+   - `tools/run_host_tests.sh` los compila con ASan y UBSan, junto con los autotests de `make_index.py` y
+     `make_dist.py`. La integración continua los ejecuta en cada pull request ([DEVELOPMENT.md](DEVELOPMENT.md)).
 5. **Lo que no se puede probar en el ordenador se automatiza en la placa.** `tools/device_tests.py` maneja la tele por
    el puerto serie, con la sintonía de prueba `T <ruta>`, y comprueba el log contra fixtures sintéticas.
+
+## En una imagen
+
+Dentro de la tele, el trabajo se reparte entre los dos núcleos del ESP32-S3. Una pantalla SPI a 40 MHz tarda 38 ms en
+dibujar un fotograma, así que el vídeo local va a 20 fps (50 ms por fotograma). Así queda margen para una calidad
+JPEG alta.
+
+```mermaid
+flowchart LR
+  subgraph SD["microSD"]
+    MJ[".mjpeg"]
+    AAC[".aac"]
+    IDX[".idx"]
+  end
+  subgraph C0["Núcleo 0 · con el Wi-Fi"]
+    RD["sdread<br/>lee 16 KB por delante"] --> RING[("anillo<br/>128 KB PSRAM")]
+    RING --> VID["video<br/>separa JPEG · JPEGDEC SIMD"]
+  end
+  subgraph C1["Núcleo 1"]
+    DSP["display<br/>SPI 40 MHz"] --> LCD["ILI9341<br/>320×240"]
+    AUD["audio<br/>AAC Helix · I2S"] --> SPK["ES8311<br/>+ altavoz"]
+  end
+  MJ --> RD
+  VID -- "bloques RGB565" --> DSP
+  AAC --> AUD
+  IDX -. "segundo en emisión" .-> RD
+  AUD -. "reloj A/V" .-> VID
+```
+
+| | |
+|---|---|
+| **Pantalla** | ILI9341 de 2,8", 320×240, RGB565 por SPI a 40 MHz (a 80 MHz la imagen sale mal) |
+| **Vídeo** | MJPEG 320×240 a 20 fps, `-q:v 3`, a RGB565. Hay *dithering* ordenado 4×4, apagado: en el panel su trama se ve como cuadros en las escenas oscuras |
+| **Audio** | AAC-LC mono, 44,1 kHz, 32 kb/s → ES8311 → altavoz de 40×28 mm. El audio marca el reloj |
+| **SD** | FAT32 en 4 bits a 40 MHz; una tarea lee el capítulo por delante, porque leer es casi todo esperar a la tarjeta |
+| **Medido** | 20 fps estables, sin descartes (con el *dithering* encendido, 0–3 cada 30 s) |
 
 ## Capas
 
@@ -477,7 +513,7 @@ Medido con un capítulo real (640x480 4:3, 23 min):
 | V0.2e | Provider Tunarr |
 | V0.2 estable | Canales locales y remotos sin diferencia para quien mira |
 | V0.3 | EPG y metadatos (el teletexto ya calcula la guía local), canales FAST |
-| Voz | Palmadas, STANDBY VOZ, grabadora y MENSAJES (**hecho**, firmware `voice`). "HEY RETRO" y comandos de voz: **no implementados**, en pausa (necesitan ESP-SR, ver [VOICE.md](VOICE.md)) |
+| Voz | Palmadas, STANDBY VOZ, grabadora y MENSAJES (**hecho**, firmware `voice`). «Hola ESP» y «Hey Retro» para encender desde STANDBY VOZ: **experimentales**, en una app de standby aparte ([WAKEWORD.md](WAKEWORD.md)). Comandos de voz: **no implementados** ([VOICE.md](VOICE.md)) |
 
 Pendiente de la V0.2 en la tele: líneas de red en la pantalla de diagnóstico (SERVER, CHANNEL, NET RATE, RECONNECTS,
 BUFFER, A/V DRIFT). El margen de dibujo se resolvió con vídeo local a 20 fps (80 MHz estropea la imagen).
