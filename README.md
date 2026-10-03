@@ -146,17 +146,20 @@ Todas usan la misma placa. Cambian la carcasa, cómo se maneja y el entorno de P
   macOS.
 - **Compilar y grabar cada entorno**, con sus opciones: [desarrollo](docs/DEVELOPMENT.md#compilar-y-flashear-cada-variante).
 
+<!-- Foto real de la tele90 v10, montada y encendida: todavía no existe. Cuando esté, va aquí, antes de los
+     renders y más grande que ellos, como docs/img/tele90-v10-real.jpg, con un pie que diga que es la tele de verdad. -->
+
 <p align="center">
   <img src="docs/img/case-front.jpg" width="42%" alt="Render de la carcasa tele90 v9 de frente: pantalla con la carta de ajuste, cuatro teclas debajo y patas">
   <img src="docs/img/case-back.jpg" width="42%" alt="Render de la tele90 v9 por detrás: rejillas, USB-C en el lateral y la pegatina con el QR del mando">
-  <br><sub>tele90 v9: tres piezas y cuatro teclas.</sub>
+  <br><sub>Renders de la tele90 v9: tres piezas y cuatro teclas.</sub>
 </p>
 
 <p align="center">
   <img src="docs/img/case-v10-front.jpg" width="31%" alt="Render de la tele90 v10 sin botones de frente: frontal liso, la ventana de la pantalla y un único agujero para el LED abajo a la derecha">
   <img src="docs/img/case-v10-back.jpg" width="31%" alt="Render de la tele90 v10 por detrás: rejillas en la trasera y en el techo, un recuadro liso en la trasera y la ranura del USB-C en el lateral">
   <img src="docs/img/case-v10-exploded.jpg" width="31%" alt="Despiece de la tele90 v10: el frontal, con la ventana de la pantalla, separado del cuerpo, que queda abierto por delante">
-  <br><sub>tele90 v10 sin botones: frontal y cuerpo, que cierran con 8 imanes, y solo el LED en el frontal.</sub>
+  <br><sub>Renders de la tele90 v10 sin botones: frontal y cuerpo, que cierran con 8 imanes, y solo el LED en el frontal.</sub>
 </p>
 
 **La carcasa es un diseño propio y sus archivos (STL) no están publicados**, ni los de la v9 ni los de la v10. Una

@@ -144,10 +144,14 @@ El servidor tiene sus propios tests (`pytest`, ver [RETROTV Server](../server/RE
 
 ## Integración continua
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) corre en cada pull request y en cada push a `main`, en
-Ubuntu y sin placa. Solo tiene permiso para leer el repositorio y nunca flashea nada. Solo corre en
-`ipaud/RetroTV`: en un fork o una copia se salta, para no gastar los minutos de esa cuenta (cambia el nombre en el
-workflow si la quieres allí).
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) corre en cada pull request y en cada push a la rama
+por defecto del repositorio (`main` aquí; en un fork, la que tenga), en Ubuntu y sin placa. Un push a otra rama
+aparece en Actions con los jobs saltados: esa rama la comprueba su pull request. Solo tiene permiso para leer el
+repositorio, no usa secretos y nunca flashea nada.
+
+**En un fork** funciona igual, pero GitHub desactiva los workflows de los forks hasta que su dueño los activa en la
+pestaña Actions. Un pull request de un fork hacia RetroTV corre en RetroTV, sin secretos y con permisos de solo
+lectura; si es la primera contribución de esa persona, GitHub pide que alguien con permisos lo apruebe antes.
 
 | Job | Qué comprueba | Comando |
 |---|---|---|
