@@ -38,7 +38,7 @@ usuario, con su sala y su voz; el detalle de cada prueba está en [TEST_PLAN.md]
 | Canal MENSAJES | **implementado, probado** (v0.3) | el micro oyó los mensajes por el altavoz, en orden y en bucle |
 | Wake word, comandos offline (ESP-SR) | **investigado, bloqueado** en este firmware (fase M) | ver "Wake word y comandos" |
 | «Hola ESP» en STANDBY VOZ | **prueba experimental** (`voice_ww`, `voice_nokeys_ww`), probada en la placa | una app de standby aparte con ESP-IDF 5 + ESP-SR 2.5.5: [WAKEWORD.md](WAKEWORD.md) |
-| "HEY RETRO" | **no implementado** | un modelo propio exige el servicio de pago de Espressif |
+| «Hey Retro» en STANDBY VOZ | **prueba experimental**, probada en la placa | modelo propio con microWakeWord, entrenado en el Mac y fuera del repo: [WAKEWORD.md](WAKEWORD.md) |
 | Comandos de voz | **no implementados** | MultiNet no tiene español |
 
 ## Cómo se activa
@@ -327,6 +327,9 @@ pagar un modelo. Lo que sí sería razonable, si se decide: una prueba técnica 
 **solo en STANDBY VOZ**, donde sobra CPU. Por eso la v0.4 queda en pausa y la voz se limita a palmadas, standby y
 mensajes.
 
+Después (2026-10-03): «Hola ESP» y «Hey Retro» van en una app de standby aparte con ESP-IDF 5; «Hey Retro» sin
+pagar, con microWakeWord (TFLite Micro) y un modelo entrenado en el Mac. Ver [WAKEWORD.md](WAKEWORD.md).
+
 ## Pantallas y órdenes
 
 - **MICROFONO:** AJUSTES → DIAGNOSTICO → **CH−**. Barra VU segmentada (−60 a 0 dB, verde, amarillo, rojo, con
@@ -382,5 +385,5 @@ a −76 dB con un capítulo en marcha. Ahora `AudioManager::begin` quita el sile
   volúmenes y salas. En STANDBY VOZ, falta medir los falsos encendidos con log durante horas.
 - Consumo de STANDBY VOZ estimado (~40 mA), no medido con un medidor.
 - El micrófono cuesta 16 KB de heap interno; con todo lo demás quedan ~70 KB libres (bloque mayor 61 KB).
-- "HEY RETRO" y los comandos de voz **no están implementados**: dependen de ESP-SR, que no viene en Arduino 2.0.17 y
-  exige cambiar el sistema de compilación (ver la investigación de arriba). No se hará sin permiso.
+- Los comandos de voz **no están implementados**: MultiNet no tiene español. «Hola ESP» y «Hey Retro» van, en prueba,
+  en una app de standby aparte: [WAKEWORD.md](WAKEWORD.md).

@@ -15,3 +15,5 @@ dist/
 # standby app (docs/WAKEWORD.md): downloaded components and the generated full sdkconfig
 standby/managed_components/
 standby/sdkconfig.standby
+# «Hey Retro» models: trained with non-commercial data, personal use only (docs/WAKEWORD.md)
+standby/models/heyretro*.tflite

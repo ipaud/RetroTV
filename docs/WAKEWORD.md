@@ -138,7 +138,7 @@ Solo lo medido en la placa. Lo demás queda **pendiente**.
 | Prueba | Resultado |
 |---|---|
 | Compilan `pautv`, `voice`, `voice_nokeys`, `voice_ww`, `voice_nokeys_ww` y `standby` | sí (2026-10-03) |
-| Tests de host | 692 comprobaciones, 0 fallos (2026-10-03) |
+| Tests de host | 701 comprobaciones, 0 fallos (2026-10-03) |
 | Traspaso del firmware a la app de standby | **sí** (2026-10-03): `handing over to the standby app 87831d0`, reinicio `RTC_SW_CPU_RST` |
 | El bootloader de ESP-IDF 4.4 arranca la app de ESP-IDF 5.4.1 | **sí** (2026-10-03). Los primeros intentos se colgaban: la compilación había quedado con la caché de instrucciones a 32 KB pero la IRAM enlazada para 16 KB (PlatformIO no regenera `memory.ld` al cambiar `sdkconfig.defaults`), y la app pisaba su propio código al configurar la caché. Visto con OpenOCD por el JTAG del USB (doble excepción tras `rom_config_instruction_cache_mode`). Con una compilación limpia arranca; `standby_flash.sh` la limpia sola si cambia `sdkconfig.defaults` |
 | Del traspaso a escuchar | 1,1 s (reinicio, bootloader, PSRAM, códec, modelo) |
@@ -151,7 +151,7 @@ Solo lo medido en la placa. Lo demás queda **pendiente**.
 | Tiempo de encendido | de la detección al arranque de la tele 0,4 s; intro a los 3,4 s; canal en pantalla a los 8,6 s (la intro dura ~5 s). El tiempo desde el final de la palabra hasta la detección no se puede medir con este log |
 | Estabilidad | 35 min seguidos en STANDBY VOZ (2026-10-03): sin errores de lectura de audio, memoria constante (257 KB internos libres de principio a fin), carga estable 16 % a 80 MHz |
 | Falsos positivos en habitación tranquila | 0 en 35 min (suelo −62 a −79 dBFS, pico máximo −38 dBFS) |
-| Falsos positivos (horas, con audio de series) | pendiente |
+| Falsos positivos (horas, con audio de series) | 2026-10-03, «Hola ESP» y «Hey Retro» v1 (corte 0,97) a la vez, modo `T` (solo contar): 2 h 19 min de seis capítulos de animación doblados al catalán desde los altavoces del Mac al 56 %, al lado de la tele (distancia no medida). **«Hola ESP»: 0. «Hey Retro»: 1** (a las ~2 h 08 min, media 254 de 255; la evaluación fuera de la tele con el mismo audio también daba 1). **Palmadas: 0 encendidos** (4 golpes descartados por sordos). Suelo con las series −62,8 dB de mediana (−75 dB en silencio), picos de −42 dBFS de mediana y −25 dBFS de máximo. Sin errores de lectura; carga estable 17 % + 31 % a 80 MHz |
 | Palmadas a la vez que WakeNet | funcionan con el mismo detector a 16 kHz: 2 de 3 secuencias encendieron (la primera perdió una palmada; motivo no registrado en esa versión, ahora sí se registra). Encendido ~1,9 s después de la primera palmada (cierre de secuencia 0,7 s + silencio después 0,5 s). Picos −14/−24 dB, brillo 22–33 % |
 | Despertar limpio | sí, 4 de 4 (2026-10-03): sin chasquidos ni destellos (usuario), intro y último canal, `reset reason 3` |
 | Consumo en standby con y sin WakeNet | **pendiente: no hay medidor** (ver la estimación abajo) |
@@ -171,9 +171,68 @@ palmadas; no lo es para semanas, para eso sigue AHORRO MAX (y la batería agotad
 profundo). Para confirmarlo hace falta un medidor USB, o repetir la prueba de TV12 (una noche sin USB, % de
 batería antes y después) con `voice_nokeys_ww`.
 
+## «Hey Retro»: el motor (fase 1)
+
+No hay modelo de serie para «Hey Retro». El servicio de Espressif es de pago (su programa gratuito con voces
+sintéticas elige ellos qué palabras entrenan y tarda semanas); Porcupine cerró su plan gratuito y openWakeWord
+no cabe en el S3. La vía elegida es **microWakeWord** (el de ESPHome): se entrena en el Mac con voces
+sintéticas y grabaciones propias, y corre con TFLite Micro.
+
+Fase 1, el motor, con el modelo oficial «Hey Jarvis» (Apache-2.0) mientras no hay «Hey Retro»:
+`standby/src/MicroWakeWord.*` (adaptado de `micro_wake_word` de ESPHome, cuyo C++ es **GPLv3**, así que estos dos archivos también lo son: preprocesador de 40
+características cada 10 ms y modelo int8 en streaming con ventana de 5), recibe los mismos bloques de 32 ms
+que WakeNet. Componentes: esp-tflite-micro 1.3.3, esp-nn 1.1.2, esp-micro-speech-features 1.2.3. Modelos en
+`standby/models/` (origen y licencia en su README).
+
+| Medida (2026-10-03, 80 MHz) | Resultado |
+|---|---|
+| App de standby | 916 KB (antes 684) |
+| Memoria | arena 22,5 KB; RAM interna libre 211 KB (bloque mayor 128 KB) con los dos detectores |
+| Carga | microWakeWord 10,8 ms por bloque de 32 ms (**33 %**, máximo 16 ms); WakeNet 17 %; juntos ~50 %, sin errores de audio |
+| «Hey Jarvis» (10 veces, voz del usuario, 20–30 cm) | 5 detectadas (probabilidad media 247–253 de 255): el modelo es inglés y el acento no |
+| «Hola ESP» a la vez | 3 de 3, sin cruces entre los dos detectores |
+
+Siguiente fase: entrenar «Hey Retro» (voces sintéticas en inglés, castellano y catalán, más grabaciones del
+usuario) y medir aciertos y falsos positivos igual que con «Hola ESP». Los datos de entrenamiento de
+microWakeWord son de uso no comercial: el modelo resultante sería de uso personal.
+
+## «Hey Retro»: el modelo propio (fase 2, en curso)
+
+Se entrena en el Mac, fuera del repo (`~/Desktop/DEV/heyretro-train`): dos entornos de Python (generador de
+voces Piper y microWakeWord, TensorFlow 2.21, `datasets<4`, `pymicro-features` 2.0.2), unos 30 GB de datos.
+El modelo resultante (`standby/models/heyretro.tflite`) **no entra en Git**: sus datos de entrenamiento son
+de uso no comercial. Sin él, la app de standby compila igual (`standby/model_placeholder.py` pone un archivo
+vacío en su lugar) y arranca solo con «Hola ESP» y palmadas; el log lo dice: `no «Hey Retro» model in this build`.
+
+| Material | Cantidad |
+|---|---|
+| «hey retro» sintético | 11 400 (inglés, 800 voces; castellano y catalán, 10 voces Piper; «ei retro») |
+| Voz del usuario por el micro de la tele (serie `A`, `tools/record_wakeword.py`) | 129 «Hey Retro» (8 min); 3 min de charla; 5 min de palabras trampa (2 min reservados para evaluar) |
+| Negativos | 4440 palabras parecidas sintéticas; 3,5 h de series en catalán (otros capítulos que la prueba de falsos positivos); los conjuntos de voz y ruido de microWakeWord |
+
+Un entrenamiento de 10 000 pasos tarda ~9 min en el M5 Pro (CPU). Primera prueba en la tele (v1, corte
+0,95): 29–30 de 30 «Hey Retro» a 30 cm, 1 m y 2 m; 0 falsos en ~2 min de charla; **4 falsos** en ~30 s de
+palabras trampa («hey», «metro», «retrato»). Comparación fuera de la tele (misma lógica que el aparato) sobre
+2 h 19 min de series y 2 min de trampas reservadas: entrenar más pasos empeora las series (v2: 12 falsos a
+0,95); añadir las trampas del usuario las corrige (v3: 0 en trampas). Hay mucho azar entre entrenamientos:
+la v4 (los pasos de la v1 más las trampas) dio 7 falsos en las series a 0,95.
+
+| Modelo, corte | Series 2 h 19 min | Trampas reservadas | «Hey Retro» del usuario (8 min, vistos al entrenar) |
+|---|---|---|---|
+| v1, 0,97 | 1 | 0 | 92 |
+| v2, 0,97 | 6 | 0 | 94 |
+| v3, 0,97 | 3 | 0 | 93 |
+| v4, 0,97 | 5 | 0 | 92 |
+
+**Candidato: v1 con corte 0,97.** En la tele (2026-10-03): 20 de 20 «Hey Retro» a 1 y 2 m, a la primera;
+3 detecciones en los primeros segundos de un minuto de palabras trampa y ninguna en el resto (el usuario lo da
+por bueno). Criterio para darlo por bueno del todo: ≥ 9 de 10 a 1–2 m, 0 con palabras trampa normales y como
+mucho un falso cada pocas horas con series sonando. Prueba larga en la tele (2026-10-03): **1 falso en 2 h 19 min** de
+series (y 0 de «Hola ESP»), dentro del criterio; ver Resultados.
+
 ## Pendiente
 
-- Falsos positivos durante horas con audio de series cerca (modo `T`, que solo cuenta).
+- Falsos positivos con otras salas, volúmenes y distancias (la prueba larga fue una sola: series desde el Mac, al lado).
 - Consumo medido (medidor USB) o, sin medidor, una noche sin USB comparando el % de batería.
 - Aciertos por distancia por separado (con una pausa marcada entre 20–30 cm y 1 m).
 - Si se sigue adelante: elegir entre DET_MODE_90 y 95 con esos datos, y decidir si «Hola ESP» se puede activar

@@ -47,7 +47,17 @@
 #include "voice/MicMeter.h"
 #include "voice/VoiceStandby.h"
 
-#define SLOG(fmt, ...) printf("[STANDBY] " fmt "\n", ##__VA_ARGS__)
+#include "MicroWakeWord.h"
+
+// The microWakeWord model (standby/models, embedded by CMake): «Hey Retro», trained on the Mac (docs/WAKEWORD.md).
+extern const uint8_t MWW_MODEL[] asm("_binary_heyretro_tflite_start");
+extern const uint8_t MWW_MODEL_END[] asm("_binary_heyretro_tflite_end");
+
+static bool quiet = false;  // while the microphone streams to the USB, nothing else may be written there
+#define SLOG(fmt, ...) \
+  do { \
+    if (!quiet) printf("[STANDBY] " fmt "\n", ##__VA_ARGS__); \
+  } while (0)
 
 namespace {
 
@@ -60,6 +70,15 @@ constexpr uint32_t MAX_MODELS = 16;         // a sane srmodels.bin header (ours 
 constexpr det_mode_t WAKE_MODE = DET_MODE_90;      // DET_MODE_95 hears more, and more false triggers
 constexpr uint32_t WAKE_ARM_MS = 1500;      // detections this soon after start are ignored
 constexpr uint32_t STATS_MS = 10000;
+// Serial A: the microphone to the USB, to record wake word samples on the Mac (tools/record_wakeword.py).
+// Frames of "PCM" + sequence byte + 512 samples (16 kHz, 16-bit LE). Nothing is kept on the TV; the front
+// LED blinks while it streams, like the GRABADORA, and it stops by itself after STREAM_MAX_MS.
+constexpr uint32_t STREAM_MAX_MS = 15 * 60 * 1000;
+constexpr size_t USB_TX_BUFFER = 8192;
+constexpr const char* MWW_WORD = "«Hey Retro»";
+// v1 (2026-10-03). Cutoff 0.97 (x255): at 0.95 it took 4 of the user's near misses («hey», «metro») on the
+// board; at 0.97, offline, 1 false accept in 2 h 19 min of series and none in 2 min of held-out near misses.
+constexpr MicroWakeWord::Config MWW_CONFIG = {nullptr, 247, 5, 30000};
 // WakeNet per 32 ms block (2026-10-03): 2.95 ms at 240 MHz, 3.55 at 160, 5.4 at 80 (16 % load): 80 MHz,
 // as the firmware's STANDBY VOZ. Serial C cycles them; not F: in the TV that is the flat-battery sleep.
 constexpr int CPU_STEPS_MHZ[] = {80, 160, 240};
@@ -265,6 +284,33 @@ bool modelPresent() {
          count <= MAX_MODELS;
 }
 
+// The model must be 16-byte aligned for TFLite; the embedded copy may not be. False: no second wake word.
+bool initMicroWakeWord(MicroWakeWord& mww) {
+  const size_t size = static_cast<size_t>(MWW_MODEL_END - MWW_MODEL);
+  if (size == 0) {  // the empty placeholder of model_placeholder.py
+    SLOG("microWakeWord: no %s model in this build: «Hola ESP» and claps only", MWW_WORD);
+    return false;
+  }
+  const uint8_t* model = MWW_MODEL;
+  if ((reinterpret_cast<uintptr_t>(model) & 15) != 0) {
+    uint8_t* copy = static_cast<uint8_t*>(heap_caps_aligned_alloc(16, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (copy == nullptr) return false;
+    memcpy(copy, model, size);
+    model = copy;
+  }
+  MicroWakeWord::Config c = MWW_CONFIG;
+  c.model = model;
+  const uint32_t t0 = nowMs();
+  if (!mww.begin(c)) {
+    SLOG("microWakeWord: %s did not start: «Hola ESP» and claps only", MWW_WORD);
+    return false;
+  }
+  SLOG("microWakeWord: %s ready in %" PRIu32 " ms (model %u KB, arena %u B used)", MWW_WORD, nowMs() - t0,
+       static_cast<unsigned>(size / 1024), static_cast<unsigned>(mww.arenaUsed()));
+  logMemory("with microWakeWord");
+  return true;
+}
+
 // Claps keep working without it: a missing model only logs.
 size_t initWakeNet() {
   logMemory("before WakeNet");
@@ -308,6 +354,25 @@ int serialRead() {
   return usb_serial_jtag_read_bytes(&c, 1, 0) == 1 ? c : -1;
 }
 
+struct Stream {
+  bool on = false;
+  uint32_t sinceMs = 0;
+  uint32_t frames = 0;
+  uint32_t dropped = 0;  // the Mac did not read fast enough
+  uint8_t seq = 0;
+};
+
+void streamAudio(Stream& s, const int16_t* mono, size_t n) {
+  static uint8_t frame[4 + 2 * 1024];
+  const size_t bytes = 4 + 2 * n;
+  memcpy(frame, "PCM", 3);
+  frame[3] = s.seq++;
+  memcpy(frame + 4, mono, 2 * n);
+  const int sent = usb_serial_jtag_write_bytes(frame, bytes, 0);
+  ++s.frames;
+  if (sent != static_cast<int>(bytes)) ++s.dropped;
+}
+
 struct Stats {
   uint32_t chunks = 0;
   uint64_t detectUs = 0;
@@ -315,6 +380,9 @@ struct Stats {
   uint32_t readErrors = 0;
   uint32_t ignored = 0;  // detections while arming
   uint32_t detections = 0;
+  uint64_t mwwUs = 0;
+  uint32_t mwwMaxUs = 0;
+  uint32_t mwwDetections = 0;
   int16_t peak[2] = {0, 0};  // both I2S slots: the microphone should be in the first
 };
 
@@ -343,7 +411,8 @@ extern "C" void app_main() {
   setOutput(PIN_AMP_EN, 1);
   setOutput(PIN_LED_FRONT, 0);
   usb_serial_jtag_driver_config_t usb = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
-  usb_serial_jtag_driver_install(&usb);  // input only (W, C); output goes through the secondary console
+  usb.tx_buffer_size = USB_TX_BUFFER;  // room for the microphone stream (serial A)
+  usb_serial_jtag_driver_install(&usb);  // input (W, C, T, A) and the microphone stream; logs go through the console
   const esp_app_desc_t* app = esp_app_get_description();
   SLOG("RETROTV standby app %s (ESP-IDF %s): «Hola ESP» and claps", app->version, app->idf_ver);
   SLOG("next boot: the TV (%s)", esp_err_to_name(bootTv));
@@ -365,6 +434,8 @@ extern "C" void app_main() {
   size_t chunk = initWakeNet();
   const bool wakeWord = chunk > 0;
   if (!wakeWord) chunk = 512;  // claps alone: 32 ms blocks
+  static MicroWakeWord mww;
+  const bool mwwOn = initMicroWakeWord(mww);
 
   ClapDetector clap(RATE);
   clap.setSensitivity(settings.clapSensitivity);
@@ -381,6 +452,7 @@ extern "C" void app_main() {
   bool keysArmed = false;  // a key still down from switching off must be let go first
   size_t cpuStep = 0;
   bool countOnly = false;
+  Stream stream;
   ClapDetector::Stats clapSeen;  // serial T: «Hola ESP» is logged and counted, but does not wake
   SLOG("listening (%s)", wakeWord ? "«Hola ESP» + three claps" : "three claps");
 
@@ -401,6 +473,8 @@ extern "C" void app_main() {
       }
     }
     st.chunks += audio ? 1 : 0;
+    if (audio && stream.on) streamAudio(stream, mono, chunk);
+    if (stream.on && now - stream.sinceMs >= STREAM_MAX_MS) stream.on = false;  // forgotten: stop
 
     if (audio && wakeWord) {
       const int64_t t0 = esp_timer_get_time();
@@ -420,6 +494,20 @@ extern "C" void app_main() {
           if (!countOnly) wake("«Hola ESP»", startMs);
           if (settings.listenLed) ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;  // counting only: a flash
         }
+      }
+    }
+
+    if (audio && mwwOn) {
+      const int64_t t0 = esp_timer_get_time();
+      const bool heard = mww.feed(mono, chunk);
+      const uint32_t us = static_cast<uint32_t>(esp_timer_get_time() - t0);
+      st.mwwUs += us;
+      if (us > st.mwwMaxUs) st.mwwMaxUs = us;
+      if (heard) {
+        SLOG("%s #%" PRIu32 " detected (mean %u, max %u of 255, %" PRIu32 " ms after start)%s", MWW_WORD,
+             ++st.mwwDetections, mww.lastMean(), mww.lastMax(), now - startMs, countOnly ? ": counting only" : "");
+        if (!countOnly) wake(MWW_WORD, startMs);
+        if (settings.listenLed) ledOffAtMs = (now + LISTEN_LED_FLASH_MS) | 1;  // counting only: a flash
       }
     }
 
@@ -453,7 +541,15 @@ extern "C" void app_main() {
     }
     if (ledOffAtMs != 0 && static_cast<int32_t>(now - ledOffAtMs) >= 0) ledOffAtMs = 0;
     const bool batteryLow = batteryOk && battery.level() != BatteryLevel::Ok;  // power/LedPattern.h
-    gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT), ledOffAtMs != 0 || standbyLed(now, false, batteryLow));
+    // Sending the microphone blinks like the GRABADORA; otherwise flashes and the standby patterns.
+    gpio_set_level(static_cast<gpio_num_t>(PIN_LED_FRONT),
+                   stream.on ? recordingLed(now) : (ledOffAtMs != 0 || standbyLed(now, false, batteryLow)));
+    if (!stream.on && quiet) {  // stopped (A or the time limit): back to the log
+      quiet = false;
+      countOnly = false;
+      SLOG("microphone to USB: off after %" PRIu32 " s, %" PRIu32 " frames, %" PRIu32 " dropped",
+           (now - stream.sinceMs) / 1000, stream.frames, stream.dropped);
+    }
 
     const bool keyDown = anyKeyDown();
     if (keysArmed && keyDown) wake("a key", startMs);
@@ -462,12 +558,26 @@ extern "C" void app_main() {
       if (c == 'W') wake("serial W", startMs);
       if (c == 'T') {  // tests: hit rate per distance, false positives over hours
         countOnly = !countOnly;
-        SLOG("«Hola ESP» %s", countOnly ? "counts only (T again: it wakes)" : "wakes the TV again");
+        SLOG("wake words %s", countOnly ? "only count (T again: they wake)" : "wake the TV again");
+      }
+      if (c == 'A' && !stream.on) {
+        SLOG("microphone to USB: on (A again to stop; at most %" PRIu32 " min); wake words only count",
+             STREAM_MAX_MS / 60000);
+        fflush(stdout);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        stream = Stream();
+        stream.on = true;
+        stream.sinceMs = now;
+        countOnly = true;
+        quiet = true;
+      } else if (c == 'A') {
+        stream.on = false;
       }
       if (c == 'C') {
         cpuStep = (cpuStep + 1) % (sizeof(CPU_STEPS_MHZ) / sizeof(CPU_STEPS_MHZ[0]));
         setCpuMhz(CPU_STEPS_MHZ[cpuStep]);
         st.detectUs = st.detectMaxUs = st.chunks = 0;  // the load is per speed
+        st.mwwUs = st.mwwMaxUs = 0;
       }
     }
 
@@ -484,13 +594,14 @@ extern "C" void app_main() {
       statsMs = now;
       const uint32_t chunkUs = static_cast<uint32_t>(chunk * 1000000ull / RATE);
       const uint32_t avgUs = st.chunks > 0 ? static_cast<uint32_t>(st.detectUs / st.chunks) : 0;
+      const uint32_t mwwAvgUs = st.chunks > 0 ? static_cast<uint32_t>(st.mwwUs / st.chunks) : 0;
       char floor[8], threshold[8];
       db10Text(clap.floorDb10(), floor, sizeof(floor));
       db10Text(clap.thresholdDb10(), threshold, sizeof(threshold));
       SLOG("stats: %d MHz, WakeNet %" PRIu32 " us avg / %" PRIu32 " us max per %" PRIu32 " us chunk (load %" PRIu32
-           "%%), read errors %" PRIu32 ", floor %s dB, clap threshold %s dB, peaks L %d R %d, battery %" PRIu32 " mV, detections %" PRIu32,
+           "%%), microWakeWord %" PRIu32 " us avg / %" PRIu32 " us max (load %" PRIu32 "%%), read errors %" PRIu32 ", floor %s dB, clap threshold %s dB, peaks L %d R %d, battery %" PRIu32 " mV, detections %" PRIu32 " + %" PRIu32,
            CPU_STEPS_MHZ[cpuStep], avgUs, st.detectMaxUs, chunkUs, chunkUs > 0 ? avgUs * 100 / chunkUs : 0,
-           st.readErrors, floor, threshold, st.peak[0], st.peak[1], battery.millivolts(), st.detections);
+           mwwAvgUs, st.mwwMaxUs, chunkUs > 0 ? mwwAvgUs * 100 / chunkUs : 0, st.readErrors, floor, threshold, st.peak[0], st.peak[1], battery.millivolts(), st.detections, st.mwwDetections);
       logMemory("now");
       st.peak[0] = st.peak[1] = 0;
     }

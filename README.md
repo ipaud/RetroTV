@@ -375,8 +375,9 @@ tele usa su micrófono. Todo pasa dentro de la tele: sin Internet y sin servicio
   subido al nivel de la voz para que se oiga bien. El canal **MENSAJES** se añade solo a la lista y los pone en bucle.
 - **Privacidad.** Las palmadas no graban nada: solo miden niveles. La grabadora solo graba cuando la pones en marcha
   desde la tele, con ● REC en pantalla; el mando web no puede grabar.
-- **Lo que no hay:** ni "HEY RETRO" ni comandos de voz. «Hola ESP» para encender desde STANDBY VOZ está en prueba,
-  en compilaciones aparte (`voice_ww`, `voice_nokeys_ww`) con una app de standby: [docs/WAKEWORD.md](docs/WAKEWORD.md).
+- **Lo que no hay:** comandos de voz. «Hola ESP» y «Hey Retro» para encender desde STANDBY VOZ están en prueba, en
+  compilaciones aparte (`voice_ww`, `voice_nokeys_ww`) con una app de standby; el modelo de «Hey Retro» se entrena
+  aparte y no viene en el repo: [docs/WAKEWORD.md](docs/WAKEWORD.md).
 
 Detalle, medidas y pruebas: [docs/VOICE.md](docs/VOICE.md).
 <br clear="right">
@@ -778,8 +779,8 @@ docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVI
   de canal. Lo que aún falta comprobar en la placa está marcado como REQUIRES HARDWARE TEST.
 - [docs/NETWORK_TUNING.md](docs/NETWORK_TUNING.md): medidas de Wi-Fi y de los directos (caudal, cortes, perfiles).
 - [docs/VOICE.md](docs/VOICE.md): RETROTV Voice, la capa opcional de micrófono: palmadas, standby por voz, grabadora y
-  canal MENSAJES; flags, calibración con palmadas reales, privacidad, medidas y lo que falta ("HEY RETRO" y comandos
-  de voz, sin implementar).
+  canal MENSAJES; flags, calibración con palmadas reales, privacidad, medidas y lo que falta (comandos de
+  voz, sin implementar; «Hola ESP» y «Hey Retro», en prueba en docs/WAKEWORD.md).
 - [docs/PROVIDERS.md](docs/PROVIDERS.md): fuentes de los canales del servidor, canales investigados y sus límites.
 - [server/README.md](server/README.md): RETROTV Server, su API y cómo montarlo en un NAS.
 
@@ -793,10 +794,17 @@ docs/                   ARCHITECTURE, HARDWARE, TEST_PLAN, NETWORK_TUNING, PROVI
 | [bblanchon/ArduinoJson](https://arduinojson.org/) | 7.4.3 | Lee `channels.json` y `wifi.json`. También compila en el ordenador para los tests. | MIT |
 | Driver ES8311 de Espressif (`lib/es8311/`) | del sketch 07.1 de Freenove, sin modificar | Configura el códec de audio ES8311 por I2C: reloj, formato y volumen. | Apache-2.0 (cabecera SPDX) |
 | Del core: `SD_MMC`, `WiFi`, `Preferences`, `Wire`, `driver/i2s.h` | core 2.0.17 | microSD en 4 bits, Wi-Fi y NTP, ajustes en NVS, bus I2C y salida de audio I2S (driver legacy). | LGPL-2.1 / Apache-2.0 |
+| [espressif/esp-sr](https://github.com/espressif/esp-sr) (app de standby) | 2.5.5 | WakeNet y el modelo «Hola ESP». | Espressif MIT (solo en chips de Espressif) |
+| [espressif/esp-tflite-micro](https://github.com/espressif/esp-tflite-micro), [esp-nn](https://github.com/espressif/esp-nn) (app de standby) | 1.3.3 · 1.1.2 | TFLite Micro y sus núcleos optimizados, para «Hey Retro». | Apache-2.0 |
+| [esphome/esp-micro-speech-features](https://github.com/esphome/esp-micro-speech-features) (app de standby) | 1.2.3 | Preprocesador de audio de microWakeWord (40 características cada 10 ms). | Apache-2.0 |
+| `standby/src/MicroWakeWord.*`, adaptado de [`micro_wake_word` de ESPHome](https://github.com/esphome/esphome/tree/dev/esphome/components/micro_wake_word) | — | Motor de «Hey Retro»: modelo en streaming y detección. | GPL-3.0 (ESPHome License) |
+| `standby/models/hey_jarvis.tflite`, de [esphome/micro-wake-word-models](https://github.com/esphome/micro-wake-word-models) | v2 | Modelo de prueba del motor. El de «Hey Retro» no está en el repo. | Apache-2.0 |
 
 - **arduino-libhelix es GPL-3.0.** Si en el futuro se distribuye el binario del firmware a terceros, habrá que revisar
   las obligaciones de GPL o sustituir el decodificador AAC. Para uso personal no hay ningún problema.
-- **Código de RETROTV:** licencia MIT ([LICENSE](LICENSE)).
+- **`standby/src/MicroWakeWord.*` es GPL-3.0** (adaptado de ESPHome; texto en [LICENSES/GPL-3.0.txt](LICENSES/GPL-3.0.txt)),
+  y con él la app de standby compilada; lo mismo que con arduino-libhelix.
+- **Código de RETROTV:** licencia MIT ([LICENSE](LICENSE)), salvo los archivos marcados con otra licencia.
 - **Carcasa:** tele90 v9, diseño propio; sus archivos no están en este repositorio.
 - **Contenido:** series, películas, logos de canales y directos son de sus dueños y no forman parte del proyecto.
   El repo no incluye ni enlaza vídeos: cada uno pone en la SD los suyos o los que tenga derecho a usar.
