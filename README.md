@@ -259,7 +259,8 @@ Con la placa suelta, BOOT: clic = canal siguiente, doble clic = anterior, manten
 - **Teletexto:** en ese canal no hay sonido, así que VOLUMEN + / − (o un toque) pasa de página.
 - **Ajustes:** CH−/CH+ mueven la selección, VOL+ elige o sube, VOL− baja, y mantener CH+ sale. Las opciones son WI-FI
   (estado y reintentar), BRILLO (10–100 %), VOLUMEN, DIAGNOSTICO y REINICIAR; con el firmware `voice`, también VOZ
-  (micrófono, palmadas, sensibilidad, APAGADO, LED ESCUCHA y GRABAR MENSAJE).
+  (micrófono, palmadas, sensibilidad, APAGADO, LED ESCUCHA y GRABAR MENSAJE; con `voice_ww`, también HOLA ESP y HEY
+  RETRO).
 
 ## Mando web
 

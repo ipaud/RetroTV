@@ -49,7 +49,7 @@ void handOverToStandbyApp() {
     PLOG("STANDBY", "cannot boot the standby app (%s): claps only", esp_err_to_name(err));
     return;
   }
-  PLOG("STANDBY", "handing over to the standby app %s («Hola ESP» + claps)", desc.version);
+  PLOG("STANDBY", "handing over to the standby app %s (wake words + claps)", desc.version);
   Serial.flush();
   ESP.restart();
 }
@@ -139,6 +139,10 @@ void App::publishVoiceSettings() {
             voiceOff ? "STANDBY VOZ" : "AHORRO MAX");
   s.addLine(claps && voiceOff ? Tone::Normal : Tone::Dim, "LED ESCUCHA %s",
             settings_.listenLed() ? "ON" : "OFF");
+#if PAUTV_WAKEWORD_ENABLED  // they only listen in STANDBY VOZ
+  s.addLine(claps && voiceOff ? Tone::Normal : Tone::Dim, "HOLA ESP   %s", settings_.holaEsp() ? "ON" : "OFF");
+  s.addLine(claps && voiceOff ? Tone::Normal : Tone::Dim, "HEY RETRO  %s", settings_.heyRetro() ? "ON" : "OFF");
+#endif
   s.addLine(settings_.micOn() && PAUTV_RECORDER_ENABLED ? Tone::Normal : Tone::Dim, "GRABAR MENSAJE");
   s.selected = voiceIndex_;
   ui_.publish(s);
@@ -179,6 +183,14 @@ void App::onVoiceSettingsInput(InputEvent e) {
         case VoiceItem::ListenLed:
           settings_.setListenLed(!settings_.listenLed());
           break;
+#if PAUTV_WAKEWORD_ENABLED
+        case VoiceItem::HolaEsp:
+          settings_.setHolaEsp(!settings_.holaEsp());
+          break;
+        case VoiceItem::HeyRetro:
+          settings_.setHeyRetro(!settings_.heyRetro());
+          break;
+#endif
         case VoiceItem::Record:
           if (step > 0) {
             startRecorder();
@@ -237,9 +249,12 @@ void App::applyVoiceChange(const VoiceChange& c) {
   }
   if (c.standbyVoice >= 0 && PAUTV_HAS_KEYS) settings_.setVoiceStandby(c.standbyVoice == 1);
   if (c.led >= 0) settings_.setListenLed(c.led == 1);
+  if (c.holaEsp >= 0 && PAUTV_WAKEWORD_ENABLED) settings_.setHolaEsp(c.holaEsp == 1);
+  if (c.heyRetro >= 0 && PAUTV_WAKEWORD_ENABLED) settings_.setHeyRetro(c.heyRetro == 1);
   applyVoiceSettings();
-  PLOG("WEB", "voice settings: mic=%u claps=%u sensitivity=%u standby=%s led=%u", settings_.micOn(), settings_.clapOn(),
-       settings_.clapSensitivity(), settings_.voiceStandby() ? "voice" : "deep", settings_.listenLed());
+  PLOG("WEB", "voice settings: mic=%u claps=%u sensitivity=%u standby=%s led=%u hola_esp=%u hey_retro=%u",
+       settings_.micOn(), settings_.clapOn(), settings_.clapSensitivity(), settings_.voiceStandby() ? "voice" : "deep",
+       settings_.listenLed(), settings_.holaEsp(), settings_.heyRetro());
   if (state_ == AppState::Settings && voiceMenu_) publishVoiceSettings();  // the TV shows the same menu
 }
 
@@ -252,6 +267,9 @@ size_t App::voiceConfigJson(char* out, size_t cap) {
   c.standbyVoice = settings_.voiceStandby() || !PAUTV_HAS_KEYS;
   c.standbyFixed = !PAUTV_HAS_KEYS;
   c.led = settings_.listenLed();
+  c.wakeWords = PAUTV_WAKEWORD_ENABLED != 0;
+  c.holaEsp = settings_.holaEsp();
+  c.heyRetro = settings_.heyRetro();
   return writeVoiceJson(c, out, cap);
 }
 
@@ -277,7 +295,11 @@ void App::voiceStandby() {
   while (buttons_.anyKeyDown() && millis() - t0 < STANDBY_RELEASE_WAIT_MS) delay(10);  // the key that asked
   delay(BUTTON_DEBOUNCE_MS);
 #if PAUTV_WAKEWORD_ENABLED
-  handOverToStandbyApp();  // returns only when there is no standby app
+  if (settings_.holaEsp() || settings_.heyRetro()) {
+    handOverToStandbyApp();  // returns only when there is no standby app
+  } else {
+    PLOG("STANDBY", "«Hola ESP» and «Hey Retro» off in AJUSTES > VOZ: claps only, here");
+  }
 #endif
   Serial.flush();
   setCpuFrequencyMhz(VOICE_STANDBY_CPU_MHZ);

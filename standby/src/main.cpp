@@ -101,6 +101,8 @@ struct Settings {
   uint8_t clapSensitivity = CLAP_SENSITIVITY_DEFAULT;
   bool listenLed = true;
   bool keys = true;  // written by the firmware before the handover (PAUTV_HAS_KEYS)
+  bool holaEsp = true;   // AJUSTES > VOZ > HOLA ESP
+  bool heyRetro = true;  // AJUSTES > VOZ > HEY RETRO
 };
 
 // The firmware's NVS settings, read only: this app never writes them and never erases NVS.
@@ -117,6 +119,8 @@ Settings readSettings() {
   if (nvs_get_u8(h, "clap_sens", &v) == ESP_OK) s.clapSensitivity = v > 100 ? 100 : v;
   if (nvs_get_u8(h, "listen_led", &v) == ESP_OK) s.listenLed = v != 0;
   if (nvs_get_u8(h, "ww_keys", &v) == ESP_OK) s.keys = v != 0;
+  if (nvs_get_u8(h, "ww_hola", &v) == ESP_OK) s.holaEsp = v != 0;
+  if (nvs_get_u8(h, "ww_retro", &v) == ESP_OK) s.heyRetro = v != 0;
   nvs_close(h);
   return s;
 }
@@ -418,8 +422,9 @@ extern "C" void app_main() {
   SLOG("next boot: the TV (%s)", esp_err_to_name(bootTv));
 
   const Settings settings = readSettings();
-  SLOG("settings: claps %s (sensitivity %u), LED %s, keys %s", settings.clapOn ? "on" : "off",
-       settings.clapSensitivity, settings.listenLed ? "on" : "off", settings.keys ? "yes" : "no");
+  SLOG("settings: claps %s (sensitivity %u), LED %s, keys %s, «Hola ESP» %s, %s %s", settings.clapOn ? "on" : "off",
+       settings.clapSensitivity, settings.listenLed ? "on" : "off", settings.keys ? "yes" : "no",
+       settings.holaEsp ? "on" : "off", MWW_WORD, settings.heyRetro ? "on" : "off");
   initKeys();
   const bool batteryOk = initBattery();
   if (!batteryOk) SLOG("battery ADC failed: the flat-battery sleep is off");
@@ -431,11 +436,11 @@ extern "C" void app_main() {
   }
   SLOG("audio: I2S %u Hz, 16 bits, MCLK %u Hz; microphone = left slot", static_cast<unsigned>(RATE),
        static_cast<unsigned>(RATE * 256));
-  size_t chunk = initWakeNet();
+  size_t chunk = settings.holaEsp ? initWakeNet() : 0;  // off in AJUSTES > VOZ: not even loaded
   const bool wakeWord = chunk > 0;
   if (!wakeWord) chunk = 512;  // claps alone: 32 ms blocks
   static MicroWakeWord mww;
-  const bool mwwOn = initMicroWakeWord(mww);
+  const bool mwwOn = settings.heyRetro && initMicroWakeWord(mww);
 
   ClapDetector clap(RATE);
   clap.setSensitivity(settings.clapSensitivity);
@@ -454,7 +459,7 @@ extern "C" void app_main() {
   bool countOnly = false;
   Stream stream;
   ClapDetector::Stats clapSeen;  // serial T: «Hola ESP» is logged and counted, but does not wake
-  SLOG("listening (%s)", wakeWord ? "«Hola ESP» + three claps" : "three claps");
+  SLOG("listening (%s%s%s)", wakeWord ? "«Hola ESP» + " : "", mwwOn ? "«Hey Retro» + " : "", "three claps");
 
   for (;;) {
     size_t got = 0;

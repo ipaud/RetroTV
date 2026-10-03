@@ -52,7 +52,19 @@ class App {
     Restart,
     Count
   };
-  enum class VoiceItem : uint8_t { Mic, Claps, Sensitivity, PowerMode, ListenLed, Record, Count };
+  enum class VoiceItem : uint8_t {
+    Mic,
+    Claps,
+    Sensitivity,
+    PowerMode,
+    ListenLed,
+#if PAUTV_WAKEWORD_ENABLED
+    HolaEsp,
+    HeyRetro,
+#endif
+    Record,
+    Count
+  };
 
   // App.cpp
   void enter(AppState next);

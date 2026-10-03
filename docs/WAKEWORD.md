@@ -58,8 +58,9 @@ firmware de la tele: arranque normal, intro y último canal
   fila que el driver del códec ya trae). No hay remuestreo ni captura simultánea: el firmware de la tele ya no corre.
 - **Palmadas:** la app usa el mismo `ClapDetector` y las mismas reglas de STANDBY VOZ (`VoiceStandby.h`, tres
   palmadas con silencio alrededor) del firmware, a 16 kHz. Los dos detectores reciben los mismos bloques.
-- **Ajustes:** lee los del firmware en NVS (`pautv`: palmadas, sensibilidad, LED ESCUCHA) y `ww_keys` (si la carcasa
-  tiene teclas), que escribe el firmware antes de ceder el control.
+- **Ajustes:** lee los del firmware en NVS (`pautv`: palmadas, sensibilidad, LED ESCUCHA, `ww_hola` y `ww_retro`) y
+  `ww_keys` (si la carcasa tiene teclas), que escribe el firmware antes de ceder el control. Una palabra apagada ni
+  se carga.
 - **Seguridad:** la app de standby se borra a sí misma de la partición de arranque al empezar. Si se cuelga, el
   watchdog o una tecla (reinicio) devuelven la tele. Si `app1` está vacía o no es la app de standby, el firmware no
   cambia nada y usa el STANDBY VOZ de siempre.
@@ -230,11 +231,19 @@ por bueno). Criterio para darlo por bueno del todo: ≥ 9 de 10 a 1–2 m, 0 con
 mucho un falso cada pocas horas con series sonando. Prueba larga en la tele (2026-10-03): **1 falso en 2 h 19 min** de
 series (y 0 de «Hola ESP»), dentro del criterio; ver Resultados.
 
+## Interruptores (AJUSTES → VOZ)
+
+Con `voice_ww` y `voice_nokeys_ww`, AJUSTES → VOZ tiene dos líneas más, **HOLA ESP** y **HEY RETRO** (ON/OFF, las
+dos en ON de fábrica), y el mando web las mismas como «(experimental)». Se guardan en NVS (`ww_hola`, `ww_retro`)
+y la app de standby las lee al arrancar: la palabra apagada no se carga (menos CPU). Con las dos en OFF la tele ni
+siquiera cede el control: hace el STANDBY VOZ de siempre, solo con palmadas, en el firmware de la tele. HEY RETRO en
+ON sin el modelo (`standby/models/heyretro.tflite`) no hace nada: el log lo dice. Con ocho líneas, el menú VOZ
+junta un poco las filas para que quepan.
+
 ## Pendiente
 
 - Falsos positivos con otras salas, volúmenes y distancias (la prueba larga fue una sola: series desde el Mac, al lado).
 - Consumo medido (medidor USB) o, sin medidor, una noche sin USB comparando el % de batería.
 - Aciertos por distancia por separado (con una pausa marcada entre 20–30 cm y 1 m).
-- Si se sigue adelante: elegir entre DET_MODE_90 y 95 con esos datos, y decidir si «Hola ESP» se puede activar
-  y desactivar desde AJUSTES > VOZ.
-- «Hey Retro» y comandos en español: fuera de esta prueba.
+- Si se sigue adelante: elegir entre DET_MODE_90 y 95 con esos datos.
+- Comandos hablados en español: otra fase.

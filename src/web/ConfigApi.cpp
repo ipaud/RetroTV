@@ -124,7 +124,8 @@ bool parseVoice(const char* body, size_t len, VoiceChange& change) {
   change = VoiceChange{};
   bool any = false;
   for (const auto& [key, field] : {std::pair<const char*, int8_t*>{"mic", &change.mic}, {"claps", &change.claps},
-                                   {"led", &change.led}}) {
+                                   {"led", &change.led}, {"hola_esp", &change.holaEsp},
+                                   {"hey_retro", &change.heyRetro}}) {
     if (doc[key].isNull()) continue;
     if (!doc[key].is<bool>()) return false;
     *field = doc[key].as<bool>() ? 1 : 0;
@@ -155,6 +156,10 @@ size_t writeVoiceJson(const VoiceConfig& c, char* out, size_t cap) {
     doc["standby"] = c.standbyVoice ? "voice" : "deep";
     doc["standby_fixed"] = c.standbyFixed;
     doc["led"] = c.led;
+    if (c.wakeWords) {
+      doc["hola_esp"] = c.holaEsp;
+      doc["hey_retro"] = c.heyRetro;
+    }
   }
   if (measureJson(doc) + 1 > cap) return 0;
   return serializeJson(doc, out, cap);

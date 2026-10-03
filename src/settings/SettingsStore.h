@@ -32,6 +32,11 @@ class SettingsStore {
   bool listenLed() const { return current_.listenLed; }
   void setVoiceStandby(bool on);
   void setListenLed(bool on);
+  // The standby app's wake words (docs/WAKEWORD.md); only the _ww builds show them.
+  bool holaEsp() const { return current_.holaEsp; }
+  bool heyRetro() const { return current_.heyRetro; }
+  void setHolaEsp(bool on);
+  void setHeyRetro(bool on);
   // The MENSAJES channel was put in channels.json once: if the user removes it, it stays removed.
   bool messagesChannelAdded() const;
   void setMessagesChannelAdded();  // written at once
@@ -48,6 +53,8 @@ class SettingsStore {
     uint8_t clapSensitivity;
     bool voiceStandby;
     bool listenLed;
+    bool holaEsp;
+    bool heyRetro;
 #endif
   };
   void touch();

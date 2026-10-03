@@ -26,7 +26,7 @@ usuario, con su sala y su voz; el detalle de cada prueba está en [TEST_PLAN.md]
 | Detector de palmadas | **implementado, probado** | 43 secuencias reales en el log; ver calibración |
 | Doble palmada | **no hace nada** (con el firmware `voice`) | apagaba (probado 2026-10-02); se colaban demasiados pares de ruidos |
 | Triple palmada → apagar a STANDBY VOZ | implementado, **pendiente de probar** | antes cambiaba de canal (probado); el usuario pasó de dos a tres palmadas para encender y apagar (2026-10-03) |
-| Ajustes AJUSTES → VOZ | **implementado, probado** | MICROFONO, PALMADAS, SENSIBLE, APAGADO, LED ESCUCHA y GRABAR MENSAJE, en NVS; recorridos por serie (sin teclas montadas) |
+| Ajustes AJUSTES → VOZ | **implementado, probado** | MICROFONO, PALMADAS, SENSIBLE, APAGADO, LED ESCUCHA y GRABAR MENSAJE (y HOLA ESP y HEY RETRO con `_ww`), en NVS; recorridos por serie (sin teclas montadas) |
 | Descartar el sonido de la propia tele | **implementado, probado** | envolvente del programa por encima de 400 Hz |
 | Falsos positivos con la tele sonando | **probado con una escena, sin validar en general** | 30 min con un capítulo concreto al 75 %: 0 dobles (2026-10-03). No se ha probado con otros programas, volúmenes ni salas |
 | STANDBY VOZ: cada palmada = destello del piloto | **implementado, probado** (v0.2) | |
@@ -336,7 +336,8 @@ pagar, con microWakeWord (TFLite Micro) y un modelo entrenado en el Mac. Ver [WA
   el pico retenido 1 s en blanco), RMS, PEAK, recortes, errores de lectura y la última secuencia oída. MENU
   (mantener CH+) vuelve.
 - **AJUSTES → VOZ:** MICROFONO ON/OFF (pausa la captura), PALMADAS ON/OFF, SENSIBLE 0–100 de 10 en 10, APAGADO
-  (AHORRO MAX o STANDBY VOZ), LED ESCUCHA ON/OFF (el destello en STANDBY VOZ) y GRABAR MENSAJE.
+  (AHORRO MAX o STANDBY VOZ), LED ESCUCHA ON/OFF (el destello en STANDBY VOZ) y GRABAR MENSAJE. Con `voice_ww` y
+  `voice_nokeys_ww`, también HOLA ESP y HEY RETRO ON/OFF (experimentales, [WAKEWORD.md](WAKEWORD.md)).
 - **Mando web → AJUSTES → VOZ:** los mismos ajustes salvo GRABAR MENSAJE (`/api/config/voice`, con el móvil
   emparejado). Un cambio desde el móvil se ve al momento si el menú VOZ está abierto en la tele. Sin teclas, APAGADO
   sale fijo en STANDBY VOZ.

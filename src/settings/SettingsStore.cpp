@@ -17,6 +17,8 @@ constexpr const char* KEY_CLAP_ON = "clap_on";
 constexpr const char* KEY_CLAP_SENS = "clap_sens";
 constexpr const char* KEY_VOICE_STANDBY = "v_standby";
 constexpr const char* KEY_LISTEN_LED = "listen_led";
+constexpr const char* KEY_HOLA_ESP = "ww_hola";    // read by the standby app too (standby/src/main.cpp)
+constexpr const char* KEY_HEY_RETRO = "ww_retro";
 constexpr const char* KEY_MSG_CHANNEL = "msg_ch";
 #endif
 
@@ -38,6 +40,8 @@ void SettingsStore::begin() {
       min<uint8_t>(open_ ? prefs_.getUChar(KEY_CLAP_SENS, CLAP_SENSITIVITY_DEFAULT) : CLAP_SENSITIVITY_DEFAULT, 100);
   current_.voiceStandby = open_ ? prefs_.getBool(KEY_VOICE_STANDBY, false) : false;  // default: deep sleep, as before
   current_.listenLed = open_ ? prefs_.getBool(KEY_LISTEN_LED, true) : true;
+  current_.holaEsp = open_ ? prefs_.getBool(KEY_HOLA_ESP, true) : true;
+  current_.heyRetro = open_ ? prefs_.getBool(KEY_HEY_RETRO, true) : true;
   PLOG("SETTINGS", "voice: mic=%u claps=%u sensitivity=%u standby=%s led=%u", current_.micOn, current_.clapOn,
        current_.clapSensitivity, current_.voiceStandby ? "voice" : "deep sleep", current_.listenLed);
 #endif
@@ -76,6 +80,18 @@ void SettingsStore::setVoiceStandby(bool on) {
 void SettingsStore::setListenLed(bool on) {
   if (on == current_.listenLed) return;
   current_.listenLed = on;
+  touch();
+}
+
+void SettingsStore::setHolaEsp(bool on) {
+  if (on == current_.holaEsp) return;
+  current_.holaEsp = on;
+  touch();
+}
+
+void SettingsStore::setHeyRetro(bool on) {
+  if (on == current_.heyRetro) return;
+  current_.heyRetro = on;
   touch();
 }
 
@@ -125,18 +141,23 @@ void SettingsStore::flush() {
 #if PAUTV_MIC_ENABLED
   const bool voice = current_.micOn != saved_.micOn || current_.clapOn != saved_.clapOn ||
                      current_.clapSensitivity != saved_.clapSensitivity ||
-                     current_.voiceStandby != saved_.voiceStandby || current_.listenLed != saved_.listenLed;
+                     current_.voiceStandby != saved_.voiceStandby || current_.listenLed != saved_.listenLed ||
+                     current_.holaEsp != saved_.holaEsp || current_.heyRetro != saved_.heyRetro;
   if (voice) {
     prefs_.putBool(KEY_MIC_ON, current_.micOn);
     prefs_.putBool(KEY_CLAP_ON, current_.clapOn);
     prefs_.putUChar(KEY_CLAP_SENS, current_.clapSensitivity);
     prefs_.putBool(KEY_VOICE_STANDBY, current_.voiceStandby);
     prefs_.putBool(KEY_LISTEN_LED, current_.listenLed);
+    prefs_.putBool(KEY_HOLA_ESP, current_.holaEsp);
+    prefs_.putBool(KEY_HEY_RETRO, current_.heyRetro);
     saved_.micOn = current_.micOn;
     saved_.clapOn = current_.clapOn;
     saved_.clapSensitivity = current_.clapSensitivity;
     saved_.voiceStandby = current_.voiceStandby;
     saved_.listenLed = current_.listenLed;
+    saved_.holaEsp = current_.holaEsp;
+    saved_.heyRetro = current_.heyRetro;
   }
 #endif
   if (!volume && !channel && !brightness) return;  // changed and changed back

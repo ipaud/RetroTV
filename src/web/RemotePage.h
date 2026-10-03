@@ -302,6 +302,8 @@ text-shadow:0 -1px 0 #0009,0 1px 0 #ffffff24}
 <li><label class="chl"><input type="checkbox" class="sw" id="vclap"><span>Palmadas</span></label></li>
 <li><label class="chl"><input type="checkbox" class="sw" id="vsb"><span>Escuchar palmadas al apagar</span></label></li>
 <li><label class="chl"><input type="checkbox" class="sw" id="vled"><span>Piloto al o&iacute;r una palmada</span></label></li>
+<li id="lhola" hidden><label class="chl"><input type="checkbox" class="sw" id="vhola"><span>&laquo;Hola ESP&raquo; (experimental)</span></label></li>
+<li id="lretro" hidden><label class="chl"><input type="checkbox" class="sw" id="vretro"><span>&laquo;Hey Retro&raquo; (experimental)</span></label></li>
 </ul>
 <label class="fld">Sensibilidad <output id="vso"></output><input type="range" id="vsen" min="0" max="100" step="10"></label>
 <p class="msg" id="vmsg" role="status"></p></div>
@@ -406,10 +408,11 @@ $(id).onchange=async()=>{try{renderDisplay(await cfg('display',{[key]:+$(id).val
 function renderVoice(v){$('vsec').hidden=!v.available;if(!v.available)return;
 $('vmic').checked=v.mic;$('vclap').checked=v.claps;$('vled').checked=v.led;$('vsb').checked=v.standby==='voice';
 $('vsb').disabled=v.standby_fixed;$('vsen').value=v.sensitivity;$('vso').textContent=v.sensitivity;
+const ww='hola_esp' in v;$('lhola').hidden=$('lretro').hidden=!ww;if(ww){$('vhola').checked=v.hola_esp;$('vretro').checked=v.hey_retro}
 if(v.standby_fixed)msg('vmsg','Sin teclas: al apagar siempre escucha palmadas; sin palmadas, el mando la vuelve a encender')}
 async function setVoice(b){try{renderVoice(await cfg('voice',b));msg('vmsg','Guardado')}
 catch(e){msg('vmsg',e.message,1);try{renderVoice(await cfg('voice'))}catch(_){}}}
-for(const [id,key] of [['vmic','mic'],['vclap','claps'],['vled','led']])$(id).onchange=()=>setVoice({[key]:$(id).checked});
+for(const [id,key] of [['vmic','mic'],['vclap','claps'],['vled','led'],['vhola','hola_esp'],['vretro','hey_retro']])$(id).onchange=()=>setVoice({[key]:$(id).checked});
 $('vsb').onchange=()=>setVoice({standby:$('vsb').checked?'voice':'deep'});
 $('vsen').oninput=()=>{$('vso').textContent=$('vsen').value};$('vsen').onchange=()=>setVoice({sensitivity:+$('vsen').value});
 function renderChs(list){const u=$('chs');u.textContent='';for(const c of list){const l=el('li'),lab=el('label','','chl'),sw=el('input');

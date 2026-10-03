@@ -27,6 +27,8 @@ constexpr int DIAG_LINE_STEP = 20;
 
 constexpr int SETTINGS_FIRST_Y = 52;
 constexpr int SETTINGS_STEP = 30;
+constexpr int SETTINGS_ROOMY_ROWS = 6;   // more rows than this (AJUSTES > VOZ in the _ww builds) sit closer
+constexpr int SETTINGS_STEP_TIGHT = 22;  // 8 rows end above the hint line
 constexpr const char* SETTINGS_HINT = "CH-/CH+ MOVER  VOL-/VOL+ CAMBIAR  MANTEN CH+ SALIR";
 
 // OSD geometry.
@@ -202,10 +204,13 @@ void drawPowerOff(Arduino_GFX& gfx, const poweroff::Frame& f, int drawnBand) {
 void drawSettings(Arduino_GFX& gfx, const UiState& s) {
   gfx.fillScreen(COLOR_BLACK);
   drawText(gfx, 12, 10, s.title, 3, COLOR_GREEN);
+  const bool tight = s.lineCount > SETTINGS_ROOMY_ROWS;
+  const int step = tight ? SETTINGS_STEP_TIGHT : SETTINGS_STEP;
+  const int pad = tight ? 3 : 5;  // around the 16 px text
   for (int i = 0; i < s.lineCount; ++i) {
-    const int y = SETTINGS_FIRST_Y + i * SETTINGS_STEP;
+    const int y = SETTINGS_FIRST_Y + i * step;
     const bool selected = i == s.selected;
-    if (selected) gfx.fillRect(6, y - 5, SCREEN_W - 12, 26, COLOR_GREEN);
+    if (selected) gfx.fillRect(6, y - pad, SCREEN_W - 12, 16 + 2 * pad, COLOR_GREEN);
     drawText(gfx, 16, y, s.lines[i], 2, selected ? COLOR_BLACK : toneColor(s.tones[i]));
   }
   drawText(gfx, 4, SCREEN_H - 12, SETTINGS_HINT, 1, COLOR_GREY);

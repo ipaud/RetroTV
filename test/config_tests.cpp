@@ -155,6 +155,17 @@ static void testVoiceBodies() {
   CHECK(writeVoiceJson(c, out, sizeof(out)) > 0 &&
         strcmp(out, R"({"available":true,"mic":true,"claps":true,"sensitivity":60,"standby":"deep","standby_fixed":true,"led":true})") == 0);
   CHECK(writeVoiceJson(c, out, 20) == 0);  // never a cut-off JSON
+  // The _ww builds: the two wake words, each on its own.
+  const char* ww = R"({"hola_esp": false, "hey_retro": true})";
+  CHECK(parseVoice(ww, strlen(ww), v) && v.holaEsp == 0 && v.heyRetro == 1 && v.mic == -1 && v.led == -1);
+  CHECK(parseVoice(one, strlen(one), v) && v.holaEsp == -1 && v.heyRetro == -1);
+  for (const char* bad : {R"({"hola_esp": 1})", R"({"hey_retro": "on"})"}) CHECK(!parseVoice(bad, strlen(bad), v));
+  c.wakeWords = true;
+  c.holaEsp = false;
+  c.heyRetro = true;
+  char big[200];
+  CHECK(writeVoiceJson(c, big, sizeof(big)) > 0 &&
+        strcmp(big, R"({"available":true,"mic":true,"claps":true,"sensitivity":60,"standby":"deep","standby_fixed":true,"led":true,"hola_esp":false,"hey_retro":true})") == 0);
 }
 
 static void testAddMessagesChannel() {

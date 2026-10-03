@@ -53,6 +53,8 @@ struct VoiceChange {
   int sensitivity = -1;  // 0-100
   int8_t standbyVoice = -1;
   int8_t led = -1;
+  int8_t holaEsp = -1;   // _ww builds only
+  int8_t heyRetro = -1;
 };
 bool parseVoice(const char* body, size_t len, VoiceChange& change);  // false if empty or invalid
 struct VoiceConfig {
@@ -63,6 +65,9 @@ struct VoiceConfig {
   bool standbyVoice = false;  // APAGADO = STANDBY VOZ
   bool standbyFixed = false;  // button-less: always STANDBY VOZ, the phone cannot change it
   bool led = false;
+  bool wakeWords = false;  // a _ww build: the phone shows the two wake words
+  bool holaEsp = false;
+  bool heyRetro = false;
 };
 size_t writeVoiceJson(const VoiceConfig& config, char* out, size_t cap);
 
