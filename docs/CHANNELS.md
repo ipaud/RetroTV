@@ -60,6 +60,8 @@ tercio más de espacio.
 - Lo ya convertido se salta.
 - Todo se escribe como `.part` y se renombra al final: un corte no deja capítulos rotos.
 - Primero se convierte el audio, así que una `PISTA` que no existe falla al momento.
+- Si en el original el audio empieza un poco después que la imagen (o al revés), esa diferencia se conserva:
+  sin ella la voz se adelantaría. Pasaba con «The Beatles Anthology», con el audio entre 40 y 80 ms tarde.
 - Al terminar, `dot_clean -m /Volumes/RETROTV` borra los `._*` de macOS. El firmware los ignora igualmente.
 
 ## Canales (`/retrotv/config/channels.json`)

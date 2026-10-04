@@ -73,7 +73,11 @@ safe_name() {
     cut -c1-60
 }
 
-VIDEO_FILTER="scale='trunc(iw*sar/2)*2':ih,setsar=1,fps=$fps,"
+# Audio and video are converted in two passes, and each raw output starts at its own zero: a source
+# whose audio starts later than its picture (40-80 ms in some rips) would play with the voice ahead.
+# Both filters start their stream at the file's time zero instead: the late one is padded (silence, or
+# the first picture repeated) and the early one trimmed, so the two stay as they were in the source.
+VIDEO_FILTER="scale='trunc(iw*sar/2)*2':ih,setsar=1,fps=$fps:start_time=0,"
 [[ "${RECORTE_4_3:-0}" == 1 ]] && VIDEO_FILTER+="crop='min(iw,trunc(ih*4/3/2)*2)':ih,"
 [[ -n "${FILTROS:-}" ]] && VIDEO_FILTER+="${FILTROS%,},"
 VIDEO_FILTER+="scale=320:240:force_original_aspect_ratio=decrease,"
@@ -81,7 +85,7 @@ VIDEO_FILTER+="scale=320:240:force_original_aspect_ratio=decrease,"
 # lets JPEG noise from the picture bleed into the bar (coloured dashes on the TV).
 VIDEO_FILTER+="crop=trunc(iw/16)*16:trunc(ih/16)*16,"
 VIDEO_FILTER+="pad=320:240:trunc((320-iw)/32)*16:trunc((240-ih)/32)*16,setsar=1"
-AUDIO_FILTER="loudnorm=I=-16:TP=-1.5:LRA=11"
+AUDIO_FILTER="aresample=async=1:first_pts=0,loudnorm=I=-16:TP=-1.5:LRA=11"
 
 parts=()
 cleanup() { local p; for p in "${parts[@]:-}"; do if [[ -n "$p" ]]; then rm -f "$p"; fi; done; }
