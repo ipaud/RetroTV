@@ -13,6 +13,7 @@ tools/run_host_tests.sh                      # tests de la lógica pura (en Linu
 pio run -e pautv                             # y los demás entornos de platformio.ini que afecte tu cambio
 pio run -d standby                           # si tocas standby/ (compila sin el modelo de «Hey Retro»)
 cd server && python -m pip install -r requirements-dev.txt && python -m pytest   # si tocas server/, mejor en un entorno virtual
+importer/build.sh app                        # si tocas importer/ o tools/convert_video.sh (macOS; la CI no lo compila)
 ```
 
 En Linux, `g++` 13 detiene los tests de host por dos avisos `format-truncation` de los propios tests; usa clang, como

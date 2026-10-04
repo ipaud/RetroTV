@@ -459,6 +459,28 @@ reproductor, mientras la Wi-Fi recibe y/o busca redes cada 10 s; cada fallo vuel
 | TV21 | Tres palmadas: apagar y encender | Viendo un canal, tres palmadas a ritmo; en STANDBY VOZ, silencio y tres palmadas; probar también dos | Tres: apagado CRT y STANDBY VOZ; tres más la encienden. Dos: nada, ni con la tele encendida ni en standby | REQUIRES HARDWARE TEST | Lógica en el ordenador OK 2026-10-03 (684 checks); en la placa, 2026-10-03 (`voice_nokeys`, en la carcasa): al principio solo una de cada pocas triples funcionaba: las palmadas dentro de la caja salían sordas (11–17 %, límite 18 %) y la mitad se tomaban por el sonido del programa. Con el brillo al 10 %, la fuerza a ±12 dB y la regla de golpe fuerte (−30 dBFS y 28 dB sobre el fondo): dos ciclos completos seguidos, apagar y encender a la primera; dos palmadas en standby no la encendieron. Una vez una secuencia se cerró 22 s tarde (como si el micro no diera audio): ahora el log lo avisa |
 | TV22 | MENSAJES en la lista | Firmware `voice` con un `channels.json` sin canal de mensajes | `[CHANNEL] MENSAJES added to channels.json as channel N` en el primer arranque; sale en el mando web y en el zapeo; borrado a mano, no vuelve. Lógica en el ordenador: después del número más alto, nunca dos veces, el primero libre si el 999 está cogido, no toca un id `mensajes` ajeno | REQUIRES HARDWARE TEST | Lógica OK 2026-10-03 (692 checks). Placa OK 2026-10-03: `34 MENSAJES internal messages` tras MANDO (33), en `/api/channels` y en el mando del usuario ("está perfecto"); logos en color salvo GRIS |
 
+## RetroTV Importar
+
+La app de Mac que va en la tarjeta ([IMPORTER.md](IMPORTER.md)). Probada en un Mac con Apple Silicon (macOS 26) sobre
+imágenes de disco que hacen de tarjeta (`hdiutil`, FAT32 y exFAT), con la app ejecutándose desde ellas.
+
+| # | Prueba | Cómo | Esperado | Tipo | Resultado |
+|---|---|---|---|---|---|
+| T27.1 | Lógica pura | `tools/run_host_tests.sh` (en macOS: `--self-test`) | Índices iguales a los de `make_index.py`; canal añadido sin tocar el resto de `channels.json`; ids y números | HOST | OK 2026-10-04 (mismos bytes que Python también en dos capítulos reales y en 370 MB) |
+| T27.2 | ffmpeg propio | `importer/build_ffmpeg.sh`; 11 vídeos (mkv, avi, webm, mp4, mov, m4v; H.264 8 y 10 bits, HEVC anamórfico, VP8, VP9, DivX, MS-MPEG4, ProRes; AC3 5.1, E-AC3, Opus, Vorbis, FLAC, MP3, MP2, PCM) | Igual que el ffmpeg 7.1 completo; LGPL, sin librerías de Homebrew; la parte Intel funciona | HOST | OK 2026-10-04: 53-54 dB por fotograma frente a 7.1, sin desfase, −16 LUFS; Intel con Rosetta, 51-54 dB. AV1 falla limpio |
+| T27.3 | Canal nuevo y añadir | Ventana y `--import` sobre la tarjeta simulada | Canal al final de `channels.json`, número tras la última serie; repetidos saltados; sin `._*` ni `.part` | HOST | OK 2026-10-04 |
+| T27.4 | Detener y cerrar | Detener a mitad; matar la app a mitad | Sin `.part`, sin procesos, sin canal vacío | HOST | OK 2026-10-04 (cerrar dejaba `.part`: el trap de `convert_video.sh` limpia ahora antes de escribir) |
+| T27.5 | `channels.json` ilegible | Un `channels.json` en Latin-1 | No importa, lo dice y no toca el archivo | HOST | OK 2026-10-04 |
+| T27.6 | Preparar una tarjeta exFAT | App abierta desde la tarjeta exFAT, «Preparar la tarjeta…» | Se pasa a una copia temporal, pregunta con nombre y tamaño, deja FAT32 `RETROTV` con `/retrotv`, teletexto (8), carta (9) y la app | HOST | OK 2026-10-04: 3 s, sin contraseña; la app copiada conserva la firma; la primera serie sale como canal 1 |
+| T27.6b | Tarjeta cambiada con la pregunta abierta | Quitar la tarjeta exFAT con «¿Borrar la tarjeta?» en pantalla | La pregunta se cierra sola y no se borra nada; antes de borrar se comprueba otra vez el disco (mismo disco, tamaño y UUID) | HOST | OK 2026-10-04 |
+| T27.6c | Discos que no se borran nunca | Revisión del código: SSD externo exFAT, disco con varias particiones, el del Mac | Solo soporte extraíble (`RemovableMedia`), exFAT, hasta 2 TB, una partición (sin contar la EFI de GPT) y escribible | HOST | OK 2026-10-04 (revisado; las imágenes de prueba cuentan como extraíbles) |
+| T27.6d | Pendrive y tarjeta bloqueada | Un pendrive FAT32 sin `/retrotv`; una tarjeta montada en solo lectura | El pendrive no se toma por la tarjeta; la bloqueada sale con el aviso de la pestaña y no se escribe | HOST | OK 2026-10-04 |
+| T27.7 | Expulsar | «Expulsar la tarjeta y salir» con la app en la tarjeta | La tarjeta se expulsa tras cerrar la app | HOST | OK 2026-10-04 (la orden que lanza el botón) |
+| T27.8 | microSD real | Tarjeta de verdad en el lector del Mac (y por adaptador USB) | Igual que en la simulada; macOS puede pedir permiso para volúmenes extraíbles la primera vez | REQUIRES HARDWARE TEST | Pendiente |
+| T27.9 | La tele reproduce lo importado | Encender la tele con la tarjeta | El canal nuevo sale con su número y nombre, en emisión | REQUIRES HARDWARE TEST | Pendiente |
+| T27.10 | Copia descargada | Zip descargado (con la marca de cuarentena), abrir desde la tarjeta | Aviso de Gatekeeper; «Abrir igualmente» en Privacidad y seguridad; luego abre siempre | REQUIRES HARDWARE TEST | Pendiente (`spctl` la rechaza, como a toda app no notarizada) |
+| T27.11 | Mac con Intel | Abrir y convertir en un Mac con Intel | Igual que en Apple Silicon, más lento | REQUIRES HARDWARE TEST | Pendiente (solo Rosetta) |
+
 ## Prueba de estabilidad (a partir de la fase 7) — REQUIRES HARDWARE TEST
 
 Objetivo: demostrar que el zapping no pierde memoria ni deja tareas colgadas. `PAUTV_DEBUG_STATS 1`.

@@ -55,7 +55,13 @@ mkdir -p "$out_dir"
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 # Without python3 the episode still plays, just from its beginning instead of "on air".
+# INDEXER: a program taking `--index <file.mjpeg> --fps <n>` instead (RetroTV Importar passes its own:
+# a Mac without developer tools has only a python3 stub, which asks to install them).
 index_episode() {
+  if [[ -n "${INDEXER:-}" ]]; then
+    "$INDEXER" --index "$1" --fps "$fps" || echo "warn     index failed for $(basename "$1")"
+    return 0
+  fi
   if ! command -v python3 >/dev/null; then
     echo "warn     python3 not found: no .idx for $(basename "$1")"
     return 0
@@ -86,11 +92,17 @@ VIDEO_FILTER+="scale=320:240:force_original_aspect_ratio=decrease,"
 VIDEO_FILTER+="crop=trunc(iw/16)*16:trunc(ih/16)*16,"
 VIDEO_FILTER+="pad=320:240:trunc((320-iw)/32)*16:trunc((240-ih)/32)*16,setsar=1"
 AUDIO_FILTER="aresample=async=1:first_pts=0,loudnorm=I=-16:TP=-1.5:LRA=11"
+# PROGRESO=1: ffmpeg's key=value progress lines (out_time_us=...) on stdout during the picture pass, for
+# RetroTV Importar's progress bar. It also reads the line tags below (convert, done, skip, FAILED).
+progress=()
+[[ "${PROGRESO:-0}" == 1 ]] && progress=(-progress pipe:1 -nostats)
 
 parts=()
 cleanup() { local p; for p in "${parts[@]:-}"; do if [[ -n "$p" ]]; then rm -f "$p"; fi; done; }
 trap cleanup EXIT
-trap 'echo; echo "interrupted: partial files removed"; exit 130' INT TERM
+# Clean up first: whoever read the output may be gone (RetroTV Importar quitting), and an echo to a closed
+# pipe kills bash before the EXIT trap runs.
+trap 'cleanup; echo; echo "interrupted: partial files removed"; exit 130' INT TERM
 
 converted=0
 skipped=0
@@ -137,7 +149,7 @@ while IFS= read -r -d '' src; do
     continue
   fi
   if ! ffmpeg -nostdin -hide_banner -loglevel error -y -i "$src" \
-      -map 0:v:0 -an -vf "$VIDEO_FILTER" -pix_fmt yuvj420p -q:v "$quality" \
+      -map 0:v:0 -an -vf "$VIDEO_FILTER" -pix_fmt yuvj420p -q:v "$quality" ${progress[@]+"${progress[@]}"} \
       -f mjpeg "$base.mjpeg.part"; then
     echo "FAILED   $name: video conversion error"
     cleanup

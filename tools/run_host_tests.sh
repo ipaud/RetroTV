@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds and runs the pure C++ tests on this computer, then the make_index.py self-test.
+# Builds and runs the pure C++ tests on this computer, then the make_index.py self-test (and on macOS,
+# RetroTV Importar's).
 # No board needed.
 #
 # Usage: tools/run_host_tests.sh
@@ -36,3 +37,7 @@ trap 'rm -rf "$out_dir"' EXIT
 "$out_dir/host_tests"
 python3 tools/make_index.py --self-test
 python3 tools/make_dist.py --self-test
+if [[ "$(uname)" == "Darwin" ]] && command -v swiftc >/dev/null; then
+  importer/build.sh
+  importer/build/RetroTVImporter --self-test
+fi

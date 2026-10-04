@@ -111,7 +111,11 @@ Si la subida falla porque no aparece el puerto: mantén BOOT, pulsa RESET, suelt
 
 ### Después: tus vídeos, tus canales y la Wi-Fi
 
-1. **Convierte tus vídeos** (solo los que tengas derecho a usar) a la carpeta del canal 2, «CANAL 1»:
+1. **Convierte tus vídeos** (solo los que tengas derecho a usar). Sin terminal: con
+   [RetroTV Importar](docs/IMPORTER.md), una app de Mac que va en la propia tarjeta
+   ([descarga](https://github.com/ipaud/RetroTV/releases/latest) o `importer/install.sh /Volumes/RETROTV`), se suelta una
+   carpeta y sale un canal nuevo; también prepara las tarjetas nuevas en exFAT. O a mano, a la carpeta del canal 2,
+   «CANAL 1»:
 
    ```sh
    tools/convert_video.sh ~/Videos/MiSerie /retrotv/media/channel01 /Volumes/RETROTV
@@ -219,6 +223,7 @@ sus diseños, la guía y el emparejamiento: [mando web](docs/REMOTE.md).
 |---|---|
 | Montar la placa, los pines, la batería y la carcasa | [Hardware](docs/HARDWARE.md) · [lista de materiales y montaje](docs/HARDWARE.md#montaje) |
 | Preparar la microSD, convertir vídeos, escribir los canales y configurar la Wi-Fi | [Canales, vídeos y microSD](docs/CHANNELS.md) |
+| Poner vídeos en la tarjeta desde un Mac sin terminal (la app RetroTV Importar) | [RetroTV Importar](docs/IMPORTER.md) |
 | Manejar la tele: teclas, apagado, batería, LED, menú y palmadas | [Controles](docs/CONTROLS.md) |
 | Usar el mando del móvil y su API | [Mando web](docs/REMOTE.md) |
 | Montar el servidor de canales por red (también en Docker o en un NAS) | [RETROTV Server](server/README.md) · [fuentes de los canales](docs/PROVIDERS.md) |
@@ -238,6 +243,9 @@ ajustes, canales por red y directos, lectura y carga de la batería, palmadas, S
 del frontal y, en pruebas, «Hola ESP» y «Hey Retro».
 
 **Pendiente o sin medir:**
+- RetroTV Importar: probada en un Mac con Apple Silicon sobre tarjetas simuladas (imágenes FAT32 y exFAT), la parte
+  Intel con Rosetta; falta una microSD de verdad, un Mac con Intel y el primer arranque de una copia descargada
+  ([TEST_PLAN](docs/TEST_PLAN.md#retrotv-importar)).
 - Las cuatro teclas montadas en la carcasa: su lógica solo está probada en el ordenador.
 - El táctil: solo existe en la FNK0104B y no se ha probado en ninguna.
 - Apagar con tres palmadas con la tele encendida (TV21).
@@ -247,7 +255,7 @@ del frontal y, en pruebas, «Hola ESP» y «Hey Retro».
   voz ([resultados](docs/WAKEWORD.md#resultados)).
 
 **Límites conocidos:**
-- Solo Wi-Fi de 2,4 GHz y microSD en FAT32 (no exFAT).
+- Solo Wi-Fi de 2,4 GHz y microSD en FAT32 (no exFAT; RetroTV Importar convierte una tarjeta exFAT, borrándola).
 - Las órdenes del mando web no llevan PIN: cualquiera en tu Wi-Fi puede cambiar de canal. Los ajustes sí piden
   emparejar el móvil, y solo uno a la vez.
 - Las contraseñas Wi-Fi quedan en texto plano, en `wifi.json` de la SD o en `include/secrets.h`.
@@ -269,6 +277,7 @@ del frontal y, en pruebas, «Hola ESP» y «Hey Retro».
 | [esphome/esp-micro-speech-features](https://github.com/esphome/esp-micro-speech-features) (app de standby) | 1.2.3 | Preprocesador de audio de microWakeWord (40 características cada 10 ms). | Apache-2.0 |
 | `standby/src/MicroWakeWord.*`, adaptado de [`micro_wake_word` de ESPHome](https://github.com/esphome/esphome/tree/dev/esphome/components/micro_wake_word) | — | Motor de «Hey Retro»: modelo en streaming y detección. | GPL-3.0 (ESPHome License) |
 | `standby/models/hey_jarvis.tflite`, de [esphome/micro-wake-word-models](https://github.com/esphome/micro-wake-word-models) | v2 | Modelo de prueba del motor. El de «Hey Retro» no está en el repo. | Apache-2.0 |
+| [FFmpeg](https://ffmpeg.org) (dentro de RetroTV Importar.app) | 9.0.2 | Convierte los vídeos en la app de Mac. Compilado por `importer/build_ffmpeg.sh` sin partes GPL; la app lleva la licencia y de dónde sale el código. | LGPL-2.1+ |
 
 - **arduino-libhelix es GPL-3.0.** Si en el futuro se distribuye el binario del firmware a terceros, habrá que revisar
   las obligaciones de GPL o sustituir el decodificador AAC. Para uso personal no hay ningún problema.
